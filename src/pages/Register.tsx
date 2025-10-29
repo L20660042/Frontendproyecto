@@ -9,6 +9,18 @@ import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/select";
 import logo from '../assets/image.png';
 
+// Tipos de los campos del formulario
+type FieldName = "firstName" | "lastName" | "email" | "password" | "confirmPassword" | "userType";
+
+interface FormDataType {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  userType: string;
+}
+
 export default function RegistroPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -16,26 +28,26 @@ export default function RegistroPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [code, setCode] = useState(""); // Código de validación
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormDataType>({
     firstName: "",
     lastName: "",
     email: "",
     password: "",
     confirmPassword: "",
-    userType: "", // Tipo de usuario
+    userType: "",
   });
 
-  const navigate = useNavigate();  // Usar useNavigate para la redirección
+  const navigate = useNavigate();
 
-  const updateFormData = (field: string, value: any) => {
+  // Tipado estricto de los campos
+  const updateFormData = (field: FieldName, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleNext = async () => {
-    // Paso 1: Validación de los datos personales
     if (currentStep === 1 && formData.firstName && formData.lastName && formData.email) {
-      setCurrentStep(2); // Paso 2: Validación de correo
-      // Enviar el código de validación al correo
+      setIsLoading(true);
+      setError("");
       try {
         const response = await fetch("https://backend-proy-production.up.railway.app/users/send-verification-code", {
           method: "POST",
@@ -44,25 +56,49 @@ export default function RegistroPage() {
           },
           body: JSON.stringify({ email: formData.email }),
         });
-
         if (response.ok) {
-          console.log("Código de verificación enviado");
+          setCurrentStep(2);
+          setError("");
         } else {
           setError("Hubo un problema al enviar el código");
         }
       } catch (err) {
         setError("Error al enviar el código de validación");
+      } finally {
+        setIsLoading(false);
       }
-    } 
-    // Paso 2: Validación del código
-    else if (currentStep === 2 && code === "123456") { // Simulación de validación del código
-      setCurrentStep(3); // Paso 3: Contraseña
-    } 
-    // Paso 3: Validación de la contraseña
+    }
+    else if (currentStep === 2 && code) {
+      setIsLoading(true);
+      setError("");
+      try {
+        const response = await fetch("https://backend-proy-production.up.railway.app/users/validate-code", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            code: code,
+          }),
+        });
+        const data = await response.json();
+        if (response.ok) {
+          setCurrentStep(3);
+          setError("");
+        } else {
+          setError(data.message || "Código inválido");
+        }
+      } catch (err) {
+        setError("Error al validar el código");
+      } finally {
+        setIsLoading(false);
+      }
+    }
     else if (currentStep === 3 && formData.password && formData.password === formData.confirmPassword) {
       setIsLoading(true);
+      setError("");
       try {
-        // Enviar los datos al backend para crear el usuario
         const response = await fetch("https://backend-proy-production.up.railway.app/users/register", {
           method: "POST",
           headers: {
@@ -72,15 +108,14 @@ export default function RegistroPage() {
             nombre: formData.firstName,
             apellido: formData.lastName,
             correo: formData.email,
-            pase: formData.password,
+            password: formData.password,
+            confirmPassword: formData.confirmPassword,
             userType: formData.userType,
           }),
         });
-
         const data = await response.json();
         if (response.ok) {
-          console.log("Registro exitoso", data);
-          navigate('/dashboard'); // Redirigir al dashboard
+          navigate('/dashboard');
         } else {
           setError(data.message || "Error en el registro");
         }
@@ -96,10 +131,8 @@ export default function RegistroPage() {
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Lado izquierdo - Formulario de registro */}
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md space-y-6">
-          {/* Encabezado */}
           <div className="text-center space-y-2">
             <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8">
               <ArrowLeft className="w-4 h-4" />
@@ -107,15 +140,12 @@ export default function RegistroPage() {
             </Link>
             <div className="flex justify-center mb-6">
               <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center">
-                {/* Logo de Metricampus */}
                 <img src={logo} alt="Logo de Metricampus" className="w-12 h-12 object-contain" />
               </div>
             </div>
             <h1 className="text-3xl font-bold text-foreground">Crear Cuenta</h1>
             <p className="text-muted-foreground">Únete a Metricampus</p>
           </div>
-
-          {/* Barra de progreso */}
           <div className="space-y-2">
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>Paso {currentStep} de 3</span>
@@ -123,8 +153,6 @@ export default function RegistroPage() {
             </div>
             <Progress value={progressValue} className="h-2" />
           </div>
-
-          {/* Formulario de Registro */}
           <Card className="border-border/50">
             <CardHeader className="space-y-1">
               <CardTitle className="text-xl">
@@ -145,8 +173,6 @@ export default function RegistroPage() {
                     <p>{error}</p>
                   </div>
                 )}
-
-                {/* Paso 1: Información Personal */}
                 {currentStep === 1 && (
                   <div className="space-y-4">
                     <div className="space-y-2">
@@ -160,7 +186,6 @@ export default function RegistroPage() {
                         required
                       />
                     </div>
-
                     <div className="space-y-2">
                       <Label htmlFor="lastName">Apellido</Label>
                       <Input
@@ -172,7 +197,6 @@ export default function RegistroPage() {
                         required
                       />
                     </div>
-
                     <div className="space-y-2">
                       <Label htmlFor="email">Correo Electrónico</Label>
                       <Input
@@ -185,8 +209,6 @@ export default function RegistroPage() {
                         required
                       />
                     </div>
-
-                    {/* Paso 1 - Selección del Tipo de Usuario */}
                     <div className="space-y-2">
                       <Label htmlFor="userType">Tipo de Usuario</Label>
                       <Select value={formData.userType} onValueChange={(value) => updateFormData("userType", value)}>
@@ -203,8 +225,6 @@ export default function RegistroPage() {
                     </div>
                   </div>
                 )}
-
-                {/* Paso 2: Validación de Correo */}
                 {currentStep === 2 && (
                   <div className="space-y-4">
                     <div className="space-y-2">
@@ -220,8 +240,6 @@ export default function RegistroPage() {
                     </div>
                   </div>
                 )}
-
-                {/* Paso 3: Configuración de Contraseña */}
                 {currentStep === 3 && (
                   <div className="space-y-4">
                     <div className="space-y-2">
@@ -251,7 +269,6 @@ export default function RegistroPage() {
                         </Button>
                       </div>
                     </div>
-
                     <div className="space-y-2">
                       <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
                       <div className="relative">
@@ -281,8 +298,6 @@ export default function RegistroPage() {
                     </div>
                   </div>
                 )}
-
-                {/* Botones de navegación */}
                 <div className="flex gap-3 pt-4">
                   {currentStep > 1 && (
                     <Button
@@ -294,14 +309,14 @@ export default function RegistroPage() {
                       Anterior
                     </Button>
                   )}
-
                   {currentStep < 3 ? (
                     <Button
                       type="button"
                       className="flex-1 h-11"
                       onClick={handleNext}
+                      disabled={isLoading}
                     >
-                      Siguiente
+                      {isLoading ? "Procesando..." : "Siguiente"}
                     </Button>
                   ) : (
                     <Button type="submit" className="flex-1 h-11" disabled={isLoading}>
