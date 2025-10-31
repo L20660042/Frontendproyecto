@@ -1,112 +1,158 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Variant util para dark – funciona con .dark en cualquier contenedor raíz */
 @custom-variant dark (&:is(.dark *));
 
+/* =========================
+   TEMA CLARO (por defecto)
+   ========================= */
 :root {
-  /* Colores oscuros y modernos para el esquema */
-  --background: #2E3B4E; /* Fondo oscuro */
-  --foreground: #E3E6ED; /* Texto principal claro */
-  --card: #1C2531; /* Tarjetas con fondo oscuro */
-  --card-foreground: #E3E6ED; /* Texto en tarjetas */
-  --popover: #1C2531; /* Popovers con fondo oscuro */
-  --popover-foreground: #E3E6ED; /* Texto popovers */
-  --primary: #1F79B9; /* Azul confiable y profesional */
-  --primary-foreground: #ffffff; /* Texto blanco sobre azul primario */
-  --secondary: #F3A43D; /* Naranja suave */
-  --secondary-foreground: #ffffff; /* Texto sobre fondo naranja */
-  --muted: #333F4F; /* Fondo sutil oscuro */
-  --muted-foreground: #A7B2C0; /* Texto sutil */
-  --accent: #E45B5B; /* Rojo suave */
-  --accent-foreground: #ffffff; /* Texto blanco sobre fondo acento */
-  --destructive: #D85F5F; /* Rojo para acciones destructivas */
-  --destructive-foreground: #ffffff; /* Texto blanco sobre botones destructivos */
-  --border: #3A4C63; /* Bordes sutiles */
-  --input: #3A4C63; /* Fondo de entradas de texto oscuro */
-  --ring: #1F79B9; /* Anillo de enfoque azul suave */
-  --chart-1: #F39C12; /* Colores de gráficos */
-  --chart-2: #2ECC71;
-  --chart-3: #3498DB;
-  --chart-4: #9B59B6;
-  --chart-5: #1ABC9C;
-  --radius: 0.75rem; /* Radio de bordes */
-  --sidebar: #1C2531; /* Fondo lateral oscuro */
-  --sidebar-foreground: #E3E6ED; /* Texto lateral */
-  --sidebar-primary: #1F79B9; /* Color primario en lateral */
-  --sidebar-primary-foreground: #ffffff; /* Texto sobre fondo primario en lateral */
-  --sidebar-accent: #F3A43D; /* Acento lateral */
-  --sidebar-accent-foreground: #ffffff; /* Texto sobre acento lateral */
-  --sidebar-border: #3A4C63; /* Borde lateral */
-  --sidebar-ring: #1F79B9; /* Anillo lateral */
+  /* Base clara profesional (estilo dashboard corporativo) */
+  --background: #ffffff;           /* Fondo blanco total */
+  --foreground: #1E293B;           /* Texto gris-azul oscuro */
+  --card: #F9FAFB;                 /* Tarjetas ligeramente grises */
+  --card-foreground: #1E293B;
+  --popover: #ffffff;
+  --popover-foreground: #1E293B;
+
+  /* Colores de marca / acciones */
+  --primary: #2563EB;              /* Azul profesional */
+  --primary-foreground: #ffffff;
+  --secondary: #FACC15;            /* Amarillo dorado suave */
+  --secondary-foreground: #1E293B;
+  --accent: #3B82F6;               /* Azul vibrante para acentos */
+  --accent-foreground: #ffffff;
+
+  /* Estados */
+  --destructive: #EF4444;          /* Rojo moderno */
+  --destructive-foreground: #ffffff;
+
+  /* Superficies y bordes */
+  --muted: #F1F5F9;                /* Gris claro para secciones secundarias */
+  --muted-foreground: #64748B;     /* Texto suave */
+  --border: #E2E8F0;               /* Borde muy suave */
+  --input: #F8FAFC;                /* Fondos de inputs claros */
+  --ring: #2563EB;                 /* Anillo de enfoque */
+
+  /* Gráficas */
+  --chart-1: #3B82F6;
+  --chart-2: #10B981;
+  --chart-3: #F59E0B;
+  --chart-4: #8B5CF6;
+  --chart-5: #EC4899;
+
+  /* Radios */
+  --radius: 0.75rem;
+
+  /* Sidebar */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1E293B;
+  --sidebar-primary: #2563EB;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #FACC15;
+  --sidebar-accent-foreground: #1E293B;
+  --sidebar-border: #E2E8F0;
+  --sidebar-ring: #2563EB;
 }
 
+/* =========================
+   TEMA OSCURO (opcional)
+   Activa agregando .dark en <html> o <body>
+   ========================= */
 .dark {
-  /* Esquema de colores para tema oscuro */
-  --background: #1e2a31; /* Fondo oscuro */
-  --foreground: #cfd6dd; /* Texto claro */
-  --card: #2f3b45; /* Fondo de tarjetas oscuro */
-  --card-foreground: #cfd6dd; /* Texto en tarjetas */
-  --popover: #2f3b45; /* Popovers oscuros */
-  --popover-foreground: #cfd6dd; /* Texto popovers */
-  --primary: #1F79B9; /* Azul primario confiable */
-  --primary-foreground: #ffffff; /* Texto sobre fondo primario */
-  --secondary: #F3A43D; /* Naranja suave */
-  --secondary-foreground: #ffffff; /* Texto sobre fondo naranja */
-  --muted: #34495e; /* Fondo sutil oscuro */
-  --muted-foreground: #cfd6dd; /* Texto sutil */
-  --accent: #E45B5B; /* Rojo suave */
-  --accent-foreground: #ffffff; /* Texto sobre fondo de acento */
-  --destructive: #D85F5F; /* Rojo para botones destructivos */
-  --destructive-foreground: #ffffff; /* Texto sobre botones destructivos */
-  --border: #4a90e2; /* Borde primario azul suave */
-  --input: #34495e; /* Fondo oscuro para entradas */
-  --ring: #1F79B9; /* Anillo de enfoque azul suave */
-  --chart-1: #f39c12; /* Colores de gráficos */
-  --chart-2: #2ecc71;
-  --chart-3: #3498db;
-  --chart-4: #9b59b6;
-  --chart-5: #1abc9c;
-  --sidebar: #2f3b45; /* Fondo lateral oscuro */
-  --sidebar-foreground: #cfd6dd; /* Texto lateral */
-  --sidebar-primary: #1F79B9; /* Color primario lateral */
-  --sidebar-primary-foreground: #ffffff; /* Texto sobre primario lateral */
-  --sidebar-accent: #F3A43D; /* Acento lateral */
-  --sidebar-accent-foreground: #ffffff; /* Texto sobre acento lateral */
-  --sidebar-border: #4a90e2; /* Borde lateral */
-  --sidebar-ring: #1F79B9; /* Anillo lateral */
+  --background: #0F172A;           /* slate-900 aprox */
+  --foreground: #E2E8F0;           /* slate-200 */
+
+  --card: #111827;                 /* gray-900 aprox */
+  --card-foreground: #E5E7EB;
+
+  --popover: #111827;
+  --popover-foreground: #E5E7EB;
+
+  --primary: #3B82F6;              /* Azul en dark */
+  --primary-foreground: #ffffff;
+
+  --secondary: #FACC15;
+  --secondary-foreground: #1E293B;
+
+  --accent: #60A5FA;               /* Azul claro para acentos */
+  --accent-foreground: #0B1220;
+
+  --destructive: #F87171;
+  --destructive-foreground: #0B1220;
+
+  --muted: #111827;                /* Superficie secundaria dark */
+  --muted-foreground: #94A3B8;
+
+  --border: #1F2937;               /* gray-800 */
+  --input: #0B1220;                /* fondo input oscuro controlado */
+  --ring: #3B82F6;
+
+  --chart-1: #93C5FD;
+  --chart-2: #6EE7B7;
+  --chart-3: #FBBF24;
+  --chart-4: #C084FC;
+  --chart-5: #F472B6;
+
+  --radius: 0.75rem;
+
+  --sidebar: #0F172A;
+  --sidebar-foreground: #E2E8F0;
+  --sidebar-primary: #3B82F6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #FACC15;
+  --sidebar-accent-foreground: #0B1220;
+  --sidebar-border: #1F2937;
+  --sidebar-ring: #3B82F6;
 }
 
+/* =========================
+   Mapeo a tokens de Tailwind (@theme inline)
+   ========================= */
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
+
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -117,17 +163,22 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* =========================
+   Estilos base
+   ========================= */
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
 
-  /* Estilo para la barra de desplazamiento */
+  /* Scrollbar minimal y acorde al tema */
   ::-webkit-scrollbar {
     width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
@@ -141,4 +192,43 @@
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-muted-foreground/50;
   }
+}
+
+/* =========================
+   Sugerencias de utilidades (opcionales)
+   ========================= */
+/* Tarjetas y contenedores */
+.card {
+  @apply bg-card text-card-foreground rounded-[var(--radius-lg)] border border-border shadow-sm;
+}
+
+/* Botones */
+.btn-primary {
+  @apply inline-flex items-center justify-center px-4 py-2 rounded-[var(--radius-md)]
+         bg-primary text-primary-foreground hover:opacity-90
+         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60;
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center px-4 py-2 rounded-[var(--radius-md)]
+         bg-secondary text-secondary-foreground hover:opacity-95
+         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60;
+}
+
+/* Inputs */
+.input {
+  @apply w-full rounded-[var(--radius-md)] bg-input border border-border px-3 py-2
+         text-foreground placeholder-muted-foreground/70
+         focus:outline-none focus:ring-2 focus:ring-ring/60;
+}
+
+/* Sidebar */
+.sidebar {
+  @apply bg-sidebar text-sidebar-foreground border-r border-sidebar-border;
+}
+.sidebar .sidebar-primary {
+  @apply bg-sidebar-primary text-sidebar-primary-foreground;
+}
+.sidebar .sidebar-accent {
+  @apply bg-sidebar-accent text-sidebar-accent-foreground;
 }

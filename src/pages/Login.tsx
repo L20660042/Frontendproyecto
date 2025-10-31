@@ -7,7 +7,7 @@ import { Input } from "../components/input";
 import { Label } from "../components/label";
 import { Checkbox } from "../components/checkbox";
 import { Alert, AlertDescription } from "../components/alert";
-import { Eye, EyeOff, ArrowLeft, Shield, Users, BarChart3 } from "lucide-react";
+import { Eye, EyeOff, Shield, Users, BarChart3 } from "lucide-react";
 import logo from '../assets/image.png';
 
 export default function LoginPage() {
@@ -23,10 +23,8 @@ export default function LoginPage() {
     setIsLoading(true);
     setError("");
 
-    // Simular proceso de inicio de sesión
     setTimeout(() => {
       if (email && password) {
-        // Simulación de inicio de sesión exitoso
         console.log("Login successful");
       } else {
         setError("Por favor, complete todos los campos");
@@ -42,17 +40,9 @@ export default function LoginPage() {
         <div className="w-full max-w-md space-y-6">
           {/* Encabezado */}
           <div className="text-center space-y-2">
-            <Link
-              to="/"
-              className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Volver al inicio
-            </Link>
-
+            {/* Eliminado: Volver al inicio */}
             <div className="flex justify-center mb-6">
               <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center">
-                {/* Logo de Metricampus */}
                 <img src={logo} alt="Logo de Metricampus" className="w-12 h-12 object-contain" />
               </div>
             </div>
@@ -61,7 +51,7 @@ export default function LoginPage() {
             <p className="text-muted-foreground">Accede al sistema de Metricampus</p>
           </div>
 
-          {/* Formulario de inicio de sesión */}
+          {/* Formulario */}
           <Card className="border-border/50">
             <CardHeader className="space-y-1">
               <CardTitle className="text-xl">Bienvenido de vuelta</CardTitle>
@@ -123,9 +113,7 @@ export default function LoginPage() {
                       checked={rememberMe}
                       onCheckedChange={(checked) => setRememberMe(checked as boolean)}
                     />
-                    <Label htmlFor="remember" className="text-sm">
-                      Recordarme
-                    </Label>
+                    <Label htmlFor="remember" className="text-sm">Recordarme</Label>
                   </div>
                   <Link
                     to="/forgot-password"
@@ -151,17 +139,13 @@ export default function LoginPage() {
             </CardContent>
           </Card>
 
-          {/* Información adicional */}
+          {/* Info legal */}
           <div className="text-center mt-6">
             <p className="text-xs text-muted-foreground">
               Al iniciar sesión, aceptas nuestros{" "}
-              <Link to="/terms" className="text-primary hover:text-primary/80">
-                Términos de Servicio
-              </Link>{" "}
+              <Link to="/terms" className="text-primary hover:text-primary/80">Términos de Servicio</Link>{" "}
               y{" "}
-              <Link to="/privacy" className="text-primary hover:text-primary/80">
-                Política de Privacidad
-              </Link>
+              <Link to="/privacy" className="text-primary hover:text-primary/80">Política de Privacidad</Link>
             </p>
           </div>
         </div>
