@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>404 Not Found</title>
-  <meta http-equiv="refresh" content="0; url=/Frontendproyecto/">
-</head>
-<body>
-  <p>Redirecting...</p>
-  <script>
-    // Si JS está habilitado, redirigir al index.html
-    window.location.replace('/Frontendproyecto/');
-  </script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>404 Not Found</title>
+    <meta http-equiv="refresh" content="0; url=/Frontendproyecto" />
+  </head>
+  <body>
+    <p>Redirecting...</p>
+    <script>
+      // Redirige automáticamente a la misma URL que estaba antes de la actualización.
+      const currentPath = window.location.pathname + window.location.search;
+      window.location.replace('/Frontendproyecto' + currentPath);
+    </script>
+  </body>
 </html>

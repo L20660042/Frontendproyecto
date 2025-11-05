@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../co
 import { Input } from "../components/input";
 import { Label } from "../components/label";
 import { Progress } from "../components/progress";
-import { Eye, EyeOff, Shield, Users, BarChart3 } from "lucide-react";
+import { Eye, EyeOff} from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/select";
 import logo from '../assets/image.png';
 
