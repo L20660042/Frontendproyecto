@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../co
 import { Input } from "../components/input";
 import { Label } from "../components/label";
 import { Progress } from "../components/progress";
-import { Eye, EyeOff} from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/select";
 import logo from '../assets/image.png';
 
@@ -61,15 +61,16 @@ export default function RegistroPage() {
       setIsLoading(true);
       setError("");
       try {
+        // Aquí cambiamos los nombres de los campos para que coincidan con los que espera el backend
         const response = await fetch("https://backend-proy-production.up.railway.app/users/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            nombre: formData.firstName,
-            apellido: formData.lastName,
-            correo: formData.email,
+            nombre: formData.firstName,  // Aquí, usa 'nombre' en vez de 'firstName'
+            apellido: formData.lastName, // Aquí, usa 'apellido' en vez de 'lastName'
+            correo: formData.email,      // Aquí, usa 'correo' en vez de 'email'
             password: formData.password,
-            confirmPassword: formData.confirmPassword,
+            confirmPassword: formData.confirmPassword, // Aunque esto no es necesario en el backend ya que lo validas en el frontend
             userType: formData.userType,
           }),
         });
