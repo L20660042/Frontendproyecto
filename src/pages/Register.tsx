@@ -27,7 +27,6 @@ export default function RegistroPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [code, setCode] = useState(""); // Código de validación
   const [formData, setFormData] = useState<FormDataType>({
     firstName: "",
     lastName: "",
@@ -49,41 +48,11 @@ export default function RegistroPage() {
       setIsLoading(true);
       setError("");
       try {
-        const response = await fetch("https://backend-proy-production.up.railway.app/users/send-verification-code", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: formData.email }),
-        });
-        if (response.ok) {
-          setCurrentStep(2);
-          setError("");
-        } else {
-          setError("Hubo un problema al enviar el código");
-        }
+        // Eliminamos la llamada a la API de verificación de correo
+        setCurrentStep(3);  // Pasa directamente al paso 3 (Contraseña)
+        setError("");
       } catch (err) {
-        setError("Error al enviar el código de validación");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    else if (currentStep === 2 && code) {
-      setIsLoading(true);
-      setError("");
-      try {
-        const response = await fetch("https://backend-proy-production.up.railway.app/users/validate-code", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: formData.email, code }),
-        });
-        const data = await response.json();
-        if (response.ok) {
-          setCurrentStep(3);
-          setError("");
-        } else {
-          setError(data.message || "Código inválido");
-        }
-      } catch (err) {
-        setError("Error al validar el código");
+        setError("Error al enviar el código de verificación");
       } finally {
         setIsLoading(false);
       }
@@ -138,7 +107,7 @@ export default function RegistroPage() {
 
           <div className="space-y-2">
             <div className="flex justify-between text-sm text-muted-foreground">
-              <span>Paso {currentStep} de 3</span>
+              <span>Paso {currentStep} de 2</span>
               <span>{Math.round(progressValue)}% completado</span>
             </div>
             <Progress value={progressValue} className="h-2" />
@@ -148,12 +117,10 @@ export default function RegistroPage() {
             <CardHeader className="space-y-1">
               <CardTitle className="text-xl">
                 {currentStep === 1 && "Información Personal"}
-                {currentStep === 2 && "Validación de Correo"}
                 {currentStep === 3 && "Contraseña"}
               </CardTitle>
               <CardDescription>
                 {currentStep === 1 && "Ingresa tus datos personales básicos"}
-                {currentStep === 2 && "Verifica tu correo ingresando el código"}
                 {currentStep === 3 && "Crea una contraseña segura para tu cuenta"}
               </CardDescription>
             </CardHeader>
@@ -209,27 +176,9 @@ export default function RegistroPage() {
                         <SelectContent>
                           <SelectItem value="subdirector-academico">subdirector académico</SelectItem>
                           <SelectItem value="jefes-academicos">jefes académicos</SelectItem>
-                          <SelectItem value="tutores">tutores</SelectItem>
                           <SelectItem value="docentes">docentes</SelectItem>
-                          <SelectItem value="coordinadores">coordinadores</SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
-                  </div>
-                )}
-
-                {currentStep === 2 && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="code">Código de Validación</Label>
-                      <Input
-                        id="code"
-                        placeholder="Ingresa el código recibido"
-                        value={code}
-                        onChange={(e) => setCode(e.target.value)}
-                        className="h-11"
-                        required
-                      />
                     </div>
                   </div>
                 )}
@@ -332,63 +281,6 @@ export default function RegistroPage() {
               </form>
             </CardContent>
           </Card>
-        </div>
-      </div>
-
-      {/* Lado derecho - Presentación de características (igual que Login) */}
-      <div className="hidden lg:flex flex-1 bg-muted/30 items-center justify-center p-8">
-        <div className="max-w-md space-y-8">
-          <div className="text-center space-y-4">
-            <h2 className="text-2xl font-bold text-foreground">Sistema Académico Avanzado</h2>
-            <p className="text-muted-foreground">
-              Accede a herramientas profesionales para la gestión académica institucional
-            </p>
-          </div>
-
-          <div className="space-y-6">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                <BarChart3 className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-foreground mb-1">Tablero de Indicadores</h3>
-                <p className="text-sm text-muted-foreground">
-                  Visualiza métricas académicas en tiempo real con Power BI integrado
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Users className="w-6 h-6 text-accent" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-foreground mb-1">Gestión Integral</h3>
-                <p className="text-sm text-muted-foreground">
-                  Administra estudiantes, docentes y recursos académicos desde una plataforma
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-chart-3/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Shield className="w-6 h-6 text-chart-3" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-foreground mb-1">Seguridad Avanzada</h3>
-                <p className="text-sm text-muted-foreground">
-                  Protección de datos institucionales con los más altos estándares de seguridad
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-card/50 rounded-lg p-6 border border-border/50">
-            <div className="text-center space-y-2">
-              <div className="text-2xl font-bold text-primary">15,000+</div>
-              <div className="text-sm text-muted-foreground">Usuarios activos confían en nuestro sistema</div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
