@@ -1,57 +1,102 @@
-import type React from "react";
-import { useState } from "react";
-import { Link } from 'react-router-dom';
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/card";
 import { Input } from "../components/input";
 import { Label } from "../components/label";
-import { Checkbox } from "../components/checkbox";
 import { Alert, AlertDescription } from "../components/alert";
 import { Eye, EyeOff, Shield, Users, BarChart3 } from "lucide-react";
+import axios from "axios";
 import logo from '../assets/image.png';
+import { Checkbox } from "../components/checkbox";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
 
-    setTimeout(() => {
-      if (email && password) {
-        console.log("Login successful");
-      } else {
-        setError("Por favor, complete todos los campos");
-      }
+    // Validación básica
+    if (!email || !password) {
+      setError("Por favor completa todos los campos");
       setIsLoading(false);
-    }, 1000);
+      return;
+    }
+
+    try {
+      console.log("Enviando solicitud de login...");
+      const response = await axios.post("https://backend-proy-production.up.railway.app/users/login", {
+      email,
+      password
+    });
+
+      console.log("Respuesta recibida:", response.data);
+
+      if (response.data.token) {
+        localStorage.setItem("authToken", response.data.token);
+        localStorage.setItem("userData", JSON.stringify(response.data.user));
+
+        console.log("Redirigiendo según userType:", response.data.user.userType);
+        
+        // Redirección basada en el tipo de usuario
+        switch (response.data.user.userType) {
+          case "docente":
+            navigate("/docente");
+            break;
+          case "jefe-academico":
+            navigate("/jefe-academico");
+            break;
+          case "subdirector-academico":
+            navigate("/subdirector-academico");
+            break;
+          default:
+            setError("Tipo de usuario no reconocido.");
+            localStorage.removeItem("authToken");
+            localStorage.removeItem("userData");
+        }
+      } else {
+        setError("No se recibió token de autenticación.");
+      }
+    } catch (err: any) {
+      console.error("Error completo:", err);
+      if (err.response) {
+        // El servidor respondió con un código de error
+        setError(err.response.data.error || "Error en el servidor");
+      } else if (err.request) {
+        // La solicitud fue hecha pero no se recibió respuesta
+        setError("No se pudo conectar con el servidor. Verifica que el backend esté ejecutándose.");
+      } else {
+        // Algo pasó en la configuración de la solicitud
+        setError("Error de configuración: " + err.message);
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Lado izquierdo - Formulario de inicio de sesión */}
+      {/* Lado izquierdo - Formulario */}
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md space-y-6">
-          {/* Encabezado */}
           <div className="text-center space-y-2">
-            {/* Eliminado: Volver al inicio */}
             <div className="flex justify-center mb-6">
               <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center">
                 <img src={logo} alt="Logo de Metricampus" className="w-12 h-12 object-contain" />
               </div>
             </div>
-
             <h1 className="text-3xl font-bold text-foreground">Iniciar Sesión</h1>
             <p className="text-muted-foreground">Accede al sistema de Metricampus</p>
           </div>
 
-          {/* Formulario */}
           <Card className="border-border/50">
             <CardHeader className="space-y-1">
               <CardTitle className="text-xl">Bienvenido de vuelta</CardTitle>
@@ -75,6 +120,7 @@ export default function LoginPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     className="h-11"
                     required
+                    disabled={isLoading}
                   />
                 </div>
 
@@ -89,6 +135,7 @@ export default function LoginPage() {
                       onChange={(e) => setPassword(e.target.value)}
                       className="h-11 pr-10"
                       required
+                      disabled={isLoading}
                     />
                     <Button
                       type="button"
@@ -96,6 +143,7 @@ export default function LoginPage() {
                       size="sm"
                       className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                       onClick={() => setShowPassword(!showPassword)}
+                      disabled={isLoading}
                     >
                       {showPassword ? (
                         <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -112,8 +160,11 @@ export default function LoginPage() {
                       id="remember"
                       checked={rememberMe}
                       onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                      disabled={isLoading}
                     />
-                    <Label htmlFor="remember" className="text-sm">Recordarme</Label>
+                    <Label htmlFor="remember" className="text-sm">
+                      Recordarme
+                    </Label>
                   </div>
                   <Link
                     to="/forgot-password"
@@ -138,20 +189,10 @@ export default function LoginPage() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Info legal */}
-          <div className="text-center mt-6">
-            <p className="text-xs text-muted-foreground">
-              Al iniciar sesión, aceptas nuestros{" "}
-              <Link to="/terms" className="text-primary hover:text-primary/80">Términos de Servicio</Link>{" "}
-              y{" "}
-              <Link to="/privacy" className="text-primary hover:text-primary/80">Política de Privacidad</Link>
-            </p>
-          </div>
         </div>
       </div>
 
-      {/* Lado derecho - Presentación de características */}
+      {/* Lado derecho - Información */}
       <div className="hidden lg:flex flex-1 bg-muted/30 items-center justify-center p-8">
         <div className="max-w-md space-y-8">
           <div className="text-center space-y-4">
@@ -196,13 +237,6 @@ export default function LoginPage() {
                   Protección de datos institucionales con los más altos estándares de seguridad
                 </p>
               </div>
-            </div>
-          </div>
-
-          <div className="bg-card/50 rounded-lg p-6 border border-border/50">
-            <div className="text-center space-y-2">
-              <div className="text-2xl font-bold text-primary">15,000+</div>
-              <div className="text-sm text-muted-foreground">Usuarios activos confían en nuestro sistema</div>
             </div>
           </div>
         </div>
