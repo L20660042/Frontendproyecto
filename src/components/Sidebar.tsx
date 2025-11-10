@@ -8,9 +8,6 @@ import {
   Building,
   Plus,
   TrendingUp,
-  Search,
-  Bell,
-  Settings,
   Home
 } from 'lucide-react';
 import { Button } from './button';

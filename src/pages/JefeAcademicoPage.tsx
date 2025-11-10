@@ -3,7 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/button';
 import { Input } from '../components/input';
 import { 
-  BarChart3, 
   Users, 
   BookOpen, 
   TrendingUp, 
@@ -11,7 +10,6 @@ import {
   Search,
   Plus,
   Eye,
-  Filter,
   Target
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -20,7 +18,7 @@ import logo from '../assets/image.png'; // Importar el logo
 export default function JefeAcademicoDashboard() {
   type Teacher = { id: number; name: string; subjects: string[]; students: number; approvalRate: number; };
   const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
 
   useEffect(() => {
     // Simular carga de datos

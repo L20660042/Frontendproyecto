@@ -2,13 +2,11 @@ import { DynamicSidebar } from '../components/Sidebar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/card';
 import { Button } from '../components/button';
 import { Input } from '../components/input';
-import { Label } from '../components/label';
 import { 
   BarChart3, 
   Users, 
   Building, 
   TrendingUp, 
-  BookOpen,
   Search,
   Plus,
   Eye,
@@ -21,7 +19,7 @@ import { useEffect, useState } from 'react';
 import logo from '../assets/image.png'; // Importar el logo
 
 export default function SubdirectorAcademicoDashboard() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [] = useState('dashboard');
   interface Institution {
     id: number;
     name: string;
@@ -31,7 +29,7 @@ export default function SubdirectorAcademicoDashboard() {
   }
 
   const [institutions, setInstitutions] = useState<Institution[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
 
   useEffect(() => {
     // Simular carga de datos

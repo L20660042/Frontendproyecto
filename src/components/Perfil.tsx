@@ -11,7 +11,7 @@ interface PerfilProps {
   SidebarComponent: React.ComponentType;
 }
 
-export default function Perfil({ userType, SidebarComponent }: PerfilProps) {
+export default function Perfil({ SidebarComponent }: PerfilProps) {
   const [activeTab, setActiveTab] = useState('personal');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);

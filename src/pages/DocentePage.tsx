@@ -16,7 +16,7 @@ import logo from '../assets/image.png'; // Importar el logo
 export default function DocenteDashboard() {
   type Subject = { id: number; name: string; students: number; approvalRate: number; schedule: string; };
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
 
   useEffect(() => {
     // Simular carga de datos
