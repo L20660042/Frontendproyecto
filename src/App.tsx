@@ -8,7 +8,7 @@ import Perfil from './components/Perfil';
 
 function App() {
   return (
-    <Router>
+    <Router basename='/Frontendproyecto'>
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
