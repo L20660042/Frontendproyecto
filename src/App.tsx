@@ -5,12 +5,14 @@ import DocenteDashboard from './pages/DocentePage';
 import JefeAcademicoDashboard from './pages/JefeAcademicoPage';
 import SubdirectorAcademicoDashboard from './pages/SubdirectorAcademicoPage';
 import Perfil from './components/Perfil';
+import React from 'react';
 
 function App() {
   return (
     <Router basename='/Frontendproyecto'>
       <Routes>
         <Route path="/" element={<LoginPage />} />
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         
         {/* Rutas para Docente */}
@@ -41,8 +43,27 @@ function App() {
         <Route path="/subdirector-academico/programas" element={<SubdirectorAcademicoDashboard />} />
         <Route path="/subdirector-academico/perfil" element={<Perfil userType="subdirector-academico" SidebarComponent={SubdirectorAcademicoDashboard} />} />
         <Route path="/subdirector-academico/crear-institucion" element={<SubdirectorAcademicoDashboard />} />
+        
+        {/* Ruta 404 - debe ir al final */}
+        <Route path="*" element={<NotFoundRedirect />} />
       </Routes>
     </Router>
+  );
+}
+
+// Componente para redirección 404
+function NotFoundRedirect() {
+  React.useEffect(() => {
+    window.location.href = '/Frontendproyecto/';
+  }, []);
+  
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold mb-4">Página no encontrada</h1>
+        <p>Redirigiendo al inicio...</p>
+      </div>
+    </div>
   );
 }
 

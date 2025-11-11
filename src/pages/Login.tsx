@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,12 +32,18 @@ export default function LoginPage() {
       return;
     }
 
+    if (!acceptedTerms) {
+      setError("Debes aceptar los términos y condiciones para continuar");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       console.log("Enviando solicitud de login...");
       const response = await axios.post("https://backend-proy-production.up.railway.app/users/login", {
-      email,
-      password
-    });
+        email,
+        password
+      });
 
       console.log("Respuesta recibida:", response.data);
 
@@ -174,7 +181,23 @@ export default function LoginPage() {
                   </Link>
                 </div>
 
-                <Button type="submit" className="w-full h-11" disabled={isLoading}>
+                {/* Términos y condiciones */}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="terms"
+                    checked={acceptedTerms}
+                    onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
+                    disabled={isLoading}
+                  />
+                  <Label htmlFor="terms" className="text-sm">
+                    Al iniciar sesión aceptas los{" "}
+                    <Link to="/terms" className="text-primary hover:text-primary/80 underline">
+                      términos y condiciones
+                    </Link>
+                  </Label>
+                </div>
+
+                <Button type="submit" className="w-full h-11" disabled={isLoading || !acceptedTerms}>
                   {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
                 </Button>
               </form>

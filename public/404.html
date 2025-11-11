@@ -1,16 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>404 Not Found</title>
-    <meta http-equiv="refresh" content="0; url=/Frontendproyecto/" />
+    <title>Metricampus - Sistema Académico</title>
+    <script>
+      // Redirección para SPA
+      const path = window.location.pathname + window.location.search + window.location.hash;
+      // Si no estamos en la ruta base, redirigir
+      if (!path.includes('/Frontendproyecto')) {
+        window.location.href = '/Frontendproyecto/' + path.replace(/^\/+/, '');
+      }
+    </script>
   </head>
   <body>
-    <p>Redirecting...</p>
-    <script>
-      const currentPath = window.location.pathname + window.location.search;
-      window.location.replace('/Frontendproyecto' + currentPath);
-    </script>
+    <div id="root">
+      <div style="display: flex; justify-content: center; align-items: center; height: 100vh;">
+        <div style="text-align: center;">
+          <h1>Cargando Metricampus...</h1>
+          <p>Si no redirige automáticamente, <a href="/Frontendproyecto/">haz clic aquí</a></p>
+        </div>
+      </div>
+    </div>
   </body>
 </html>
