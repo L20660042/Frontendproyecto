@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DynamicSidebar } from '../components/Sidebar';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/card';
 import { Button } from '../components/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/card';
 import { 
   BarChart3, 
   Users, 
@@ -11,7 +11,7 @@ import {
   Calendar,
   Bell
 } from 'lucide-react';
-import logo from '../assets/image.png'; // Importar el logo
+import logo from '../assets/image.png';
 
 export default function DocenteDashboard() {
   type Subject = { id: number; name: string; students: number; approvalRate: number; schedule: string; };
@@ -19,7 +19,6 @@ export default function DocenteDashboard() {
   const [, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simular carga de datos
     setTimeout(() => {
       setSubjects([
         { id: 1, name: 'Matemáticas Avanzadas', students: 45, approvalRate: 78, schedule: 'Lun-Mie 08:00-10:00' },
@@ -58,6 +57,7 @@ export default function DocenteDashboard() {
           </div>
         </header>
 
+        {/* Contenido Principal */}
         <main className="flex-1 overflow-auto p-6">
           {/* Estadísticas Rápidas */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -68,12 +68,8 @@ export default function DocenteDashboard() {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-muted-foreground">
-                          {stat.title}
-                        </p>
-                        <p className="text-2xl font-bold text-foreground mt-1">
-                          {stat.value}
-                        </p>
+                        <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
+                        <p className="text-2xl font-bold text-foreground mt-1">{stat.value}</p>
                         <p className={`text-xs mt-1 ${
                           stat.trend.startsWith('+') ? 'text-green-600' : 
                           stat.trend.startsWith('-') ? 'text-red-600' : 'text-muted-foreground'
@@ -107,13 +103,8 @@ export default function DocenteDashboard() {
                 {subjects.map((subject: Subject) => (
                   <div key={subject.id} className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors">
                     <div className="flex items-center gap-4">
-                      {/* Cambiar School por el logo */}
                       <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <img 
-                          src={logo} 
-                          alt="Logo Metricampus" 
-                          className="h-6 w-6 object-contain"
-                        />
+                        <img src={logo} alt="Logo Metricampus" className="h-6 w-6 object-contain" />
                       </div>
                       <div>
                         <h3 className="font-semibold text-foreground">{subject.name}</h3>

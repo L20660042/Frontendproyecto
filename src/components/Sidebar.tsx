@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from './button';
 import { cn } from './lib/utils';
-import logo from '../assets/image.png'; // Importación correcta del logo
+import logo from '../assets/image.png';
 
 interface SidebarProps {
   userType: 'docente' | 'jefe-academico' | 'subdirector-academico';
@@ -27,7 +27,7 @@ const menuItems = {
     { icon: BookOpen, label: 'Mis Materias', href: '/docente/materias' },
     { icon: Users, label: 'Mis Estudiantes', href: '/docente/estudiantes' },
     { icon: Building, label: 'Mi Institución', href: '/docente/institucion' },
-    { icon: User, label: 'Perfil', href: '/docente/perfil' },
+    { icon: User, label: 'Perfil', href: '/docente/perfil' }, // Perfil agregado aquí
   ],
   'jefe-academico': [
     { icon: Home, label: 'Inicio', href: '/jefe-academico' },
@@ -36,7 +36,7 @@ const menuItems = {
     { icon: BookOpen, label: 'Materias', href: '/jefe-academico/materias' },
     { icon: Building, label: 'Institución', href: '/jefe-academico/institucion' },
     { icon: TrendingUp, label: 'Indicadores', href: '/jefe-academico/indicadores' },
-    { icon: User, label: 'Perfil', href: '/jefe-academico/perfil' },
+    { icon: User, label: 'Perfil', href: '/jefe-academico/perfil' }, // Perfil agregado aquí
   ],
   'subdirector-academico': [
     { icon: Home, label: 'Inicio', href: '/subdirector-academico' },
@@ -45,7 +45,7 @@ const menuItems = {
     { icon: Users, label: 'Personal Académico', href: '/subdirector-academico/personal' },
     { icon: TrendingUp, label: 'Indicadores Globales', href: '/subdirector-academico/indicadores' },
     { icon: BookOpen, label: 'Programas Académicos', href: '/subdirector-academico/programas' },
-    { icon: User, label: 'Perfil', href: '/subdirector-academico/perfil' },
+    { icon: User, label: 'Perfil', href: '/subdirector-academico/perfil' }, // Perfil agregado aquí
   ],
 };
 
@@ -60,11 +60,8 @@ export function Sidebar({ userType, userName = 'Usuario', userEmail = 'usuario@e
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    // Limpiar localStorage
     localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
-    
-    // Redirigir al login
     navigate('/');
   };
 
@@ -77,10 +74,8 @@ export function Sidebar({ userType, userName = 'Usuario', userEmail = 'usuario@e
   };
 
   const handleLeaveInstitution = () => {
-    // Lógica para salir de la institución
     if (window.confirm('¿Estás seguro de que quieres salir de la institución?')) {
       console.log('Saliendo de la institución...');
-      // Aquí iría la llamada a la API
     }
   };
 
@@ -189,7 +184,6 @@ export function Sidebar({ userType, userName = 'Usuario', userEmail = 'usuario@e
   );
 }
 
-// Componente de sidebar que obtiene los datos del usuario del localStorage
 export function DynamicSidebar() {
   const userData = JSON.parse(localStorage.getItem('userData') || '{}');
   
