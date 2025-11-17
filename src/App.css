@@ -232,3 +232,26 @@
 .sidebar .sidebar-accent {
   @apply bg-sidebar-accent text-sidebar-accent-foreground;
 }
+
+/* =========================
+   Estilos mejorados para checkboxes en Login
+   ========================= */
+.login-options-container {
+  @apply bg-muted/20 p-3 rounded-lg border border-border/50 transition-colors;
+}
+
+.login-terms-container {
+  @apply bg-card p-4 rounded-lg border-2 border-muted-foreground/20 hover:border-primary/30 transition-colors;
+}
+
+.checkbox-enhanced {
+  @apply h-5 w-5 border-2 border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground;
+}
+
+.checkbox-label-enhanced {
+  @apply text-sm font-medium text-foreground cursor-pointer;
+}
+
+.terms-link-enhanced {
+  @apply text-primary hover:text-primary/80 underline font-semibold;
+}

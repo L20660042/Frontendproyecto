@@ -6,11 +6,13 @@ import JefeAcademicoDashboard from './pages/JefeAcademicoPage';
 import SubdirectorAcademicoDashboard from './pages/SubdirectorAcademicoPage';
 import Perfil from './components/Perfil';
 import { DynamicSidebar } from './components/Sidebar';
+import UrlMasker from './components/UrlMasker'; // ← Importar el nuevo componente
 import { useEffect } from 'react';
 
 function App() {
   return (
-    <Router> {/* HashRouter sin basename */}
+    <Router>
+      <UrlMasker /> {/* ← Agregar esta línea */}
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -45,7 +47,7 @@ function App() {
         <Route path="/subdirector-academico/crear-institucion" element={<SubdirectorAcademicoDashboard />} />
         <Route path="/subdirector-academico/perfil" element={<PerfilLayout userType="subdirector-academico" />} />
         
-        {/* Ruta 404 */}
+        {/* Ruta 404 - debe ir al final */}
         <Route path="*" element={<HashNotFoundPage />} />
       </Routes>
     </Router>
