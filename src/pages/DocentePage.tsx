@@ -12,8 +12,10 @@ import {
   Bell
 } from 'lucide-react';
 import logo from '../assets/image.png';
+import { useAuthGuard } from '../components/AuthGuard';
 
 export default function DocenteDashboard() {
+  useAuthGuard();
   type Subject = { id: number; name: string; students: number; approvalRate: number; schedule: string; };
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [, setLoading] = useState(true);

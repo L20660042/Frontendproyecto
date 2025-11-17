@@ -14,8 +14,10 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import logo from '../assets/image.png'; // Importar el logo
+import { useAuthGuard } from '../components/AuthGuard';
 
 export default function JefeAcademicoDashboard() {
+  useAuthGuard();
   type Teacher = { id: number; name: string; subjects: string[]; students: number; approvalRate: number; };
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [, setLoading] = useState(true);

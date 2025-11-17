@@ -48,27 +48,41 @@ export default function LoginPage() {
       console.log("Respuesta recibida:", response.data);
 
       if (response.data.token) {
+        // ✅ AGREGAR AQUÍ EL CÓDIGO DE DEBUG
+        console.log("=== DEBUG LOGIN ===");
+        console.log("Datos guardados en localStorage:", {
+          token: response.data.token,
+          user: response.data.user
+        });
+
         localStorage.setItem("authToken", response.data.token);
         localStorage.setItem("userData", JSON.stringify(response.data.user));
+
+        // ✅ VERIFICAR INMEDIATAMENTE DESPUÉS DE GUARDAR
+        console.log("Verificación localStorage:", {
+          authToken: localStorage.getItem("authToken"),
+          userData: localStorage.getItem("userData")
+        });
+        console.log("=== FIN DEBUG ===");
 
         console.log("Redirigiendo según userType:", response.data.user.userType);
         
         // Redirección basada en el tipo de usuario
         switch (response.data.user.userType) {
           case "docente":
-            navigate("/docente");
-            break;
+          navigate("/docente"); 
+        break;
           case "jefe-academico":
-            navigate("/jefe-academico");
-            break;
+          navigate("/jefe-academico");   
+        break;
           case "subdirector-academico":
-            navigate("/subdirector-academico");
-            break;
-          default:
-            setError("Tipo de usuario no reconocido.");
-            localStorage.removeItem("authToken");
-            localStorage.removeItem("userData");
-        }
+          navigate("/subdirector-academico"); 
+        break;
+        default:
+    setError("Tipo de usuario no reconocido.");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("userData");
+}
       } else {
         setError("No se recibió token de autenticación.");
       }
@@ -88,6 +102,14 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
+  // También puedes agregar este useEffect para verificar el estado al cargar la página
+  React.useEffect(() => {
+    console.log("=== ESTADO INICIAL LOGIN ===");
+    console.log("authToken en localStorage:", localStorage.getItem("authToken"));
+    console.log("userData en localStorage:", localStorage.getItem("userData"));
+    console.log("=============================");
+  }, []);
 
   return (
     <div className="min-h-screen bg-background flex">
