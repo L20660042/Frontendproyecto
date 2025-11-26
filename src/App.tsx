@@ -8,12 +8,10 @@ import Perfil from './components/Perfil';
 import { DynamicSidebar } from './components/Sidebar';
 import UrlMasker from './components/UrlMasker'; // ← Importar el nuevo componente
 import { useEffect } from 'react';
-import { useBasePath } from './hooks/useBasePath';
 
 function App() {
-  const basePath = useBasePath();
   return (
-    <Router basename={basePath}>
+    <Router>
       <UrlMasker /> {/* ← Agregar esta línea */}
       <Routes>
         <Route path="/" element={<LoginPage />} />
