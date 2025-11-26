@@ -48,6 +48,7 @@ export default function LoginPage() {
       console.log("Respuesta recibida:", response.data);
 
       if (response.data.token) {
+        // ✅ AGREGAR AQUÍ EL CÓDIGO DE DEBUG
         console.log("=== DEBUG LOGIN ===");
         console.log("Datos guardados en localStorage:", {
           token: response.data.token,
@@ -101,6 +102,14 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
+  // También puedes agregar este useEffect para verificar el estado al cargar la página
+  React.useEffect(() => {
+    console.log("=== ESTADO INICIAL LOGIN ===");
+    console.log("authToken en localStorage:", localStorage.getItem("authToken"));
+    console.log("userData en localStorage:", localStorage.getItem("userData"));
+    console.log("=============================");
+  }, []);
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -181,7 +190,6 @@ export default function LoginPage() {
                       checked={rememberMe}
                       onCheckedChange={(checked) => setRememberMe(checked as boolean)}
                       disabled={isLoading}
-                      className="border-primary data-[state=checked]:bg-primary"
                     />
                     <Label htmlFor="remember" className="text-sm">
                       Recordarme
@@ -202,7 +210,6 @@ export default function LoginPage() {
                     checked={acceptedTerms}
                     onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
                     disabled={isLoading}
-                    className="border-primary data-[state=checked]:bg-primary"
                   />
                   <Label htmlFor="terms" className="text-sm">
                     Al iniciar sesión aceptas los{" "}

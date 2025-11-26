@@ -5,16 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Metricampus</title>
     <script>
-      // Redirección simple para GitHub Pages
-      const currentPath = window.location.pathname;
-      const basePath = '/Frontendproyecto';
+      // Redirección para SPA con HashRouter en GitHub Pages
+      const path = window.location.pathname + window.location.search + window.location.hash;
       
-      if (currentPath.includes(basePath)) {
-        // Si ya está en el path correcto, redirigir al app
-        window.location.replace(basePath + '/#/app');
-      } else {
-        // Si no, redirigir al path correcto primero
-        window.location.replace(basePath + '/#/');
+      // Si no estamos en el path correcto, redirigir
+      if (!path.includes('/Frontendproyecto')) {
+        // Redirigir manteniendo cualquier hash existente
+        const newPath = '/Frontendproyecto/' + (window.location.hash || '#/');
+        window.location.replace(newPath);
+      } else if (!window.location.hash) {
+        // Si estamos en el path correcto pero sin hash, agregarlo
+        window.location.replace('/Frontendproyecto/#/');
       }
     </script>
     <style>
@@ -54,8 +55,8 @@
   <body>
     <div class="loading-container">
       <div class="spinner"></div>
-      <h1>Redirigiendo a Metricampus...</h1>
-      <p>Por favor espera</p>
+      <h1>Configurando Metricampus...</h1>
+      <p>Redirigiendo a la aplicación</p>
     </div>
   </body>
 </html>
