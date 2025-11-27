@@ -64,11 +64,10 @@ export default function RegistroPage() {
             case "docente":
               navigate('/docente');
               break;
-            case "jefe-academico":
             case "jefe-departamento":
               navigate('/jefe-academico');
               break;
-            case "subdirector-academico":
+            case "subdireccion-academica":
             case "administrador":
               navigate('/subdirector-academico');
               break;
@@ -188,13 +187,14 @@ export default function RegistroPage() {
                           <SelectValue placeholder="Selecciona tu rol" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="subdirector-academico">Subdirector Académico</SelectItem>
-                          <SelectItem value="jefe-academico">Jefe Académico</SelectItem>
+                          <SelectItem value="subdireccion-academica">Subdirección Académica</SelectItem>
+                          <SelectItem value="jefe-departamento">Jefe de Departamento</SelectItem>
                           <SelectItem value="docente">Docente</SelectItem>
                           <SelectItem value="estudiante">Estudiante</SelectItem>
                           <SelectItem value="tutor">Tutor</SelectItem>
                           <SelectItem value="coordinador-tutorias">Coordinador de Tutorías</SelectItem>
                           <SelectItem value="control-escolar">Control Escolar</SelectItem>
+                          <SelectItem value="administrador">Administrador</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

@@ -56,33 +56,32 @@ export default function LoginPage() {
         console.log("Redirigiendo según userType:", response.user.userType);
         
         switch (response.user.userType) {
-          case "docente":
-            navigate("/docente");
-            break;
-          case "jefe-academico":
-          case "jefe-departamento":
-            navigate("/jefe-academico");
-            break;
-          case "subdirector-academico":
-          case "administrador":
-            navigate("/subdirector-academico");
-            break;
-          case "estudiante":
-            navigate("/estudiante");
-            break;
-          case "tutor":
-            navigate("/tutor");
-            break;
-          case "coordinador-tutorias":
-            navigate("/coordinador-tutorias");
-            break;
-          case "control-escolar":
-            navigate("/control-escolar");
-            break;
-          default:
-            setError("Tipo de usuario no reconocido.");
-            authService.logout();
-        }
+  case "docente":
+    navigate("/docente");
+    break;
+  case "jefe-departamento":
+    navigate("/jefe-academico");
+    break;
+  case "subdireccion-academica":
+  case "administrador":
+    navigate("/subdirector-academico");
+    break;
+  case "estudiante":
+    navigate("/estudiante");
+    break;
+  case "tutor":
+    navigate("/tutor");
+    break;
+  case "coordinador-tutorias":
+    navigate("/coordinador-tutorias");
+    break;
+  case "control-escolar":
+    navigate("/control-escolar");
+    break;
+  default:
+    setError("Tipo de usuario no reconocido.");
+    authService.logout();
+}
       } else {
         setError("No se recibió token de autenticación.");
       }

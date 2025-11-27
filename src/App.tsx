@@ -54,6 +54,11 @@ function App() {
         <Route path="/estudiante/institucion" element={<EstudianteDashboard />} />
         <Route path="/estudiante/perfil" element={<PerfilLayout />} />
         
+        {/* Rutas adicionales para otros tipos de usuario */}
+        <Route path="/tutor" element={<TutorDashboard />} />
+        <Route path="/coordinador-tutorias" element={<CoordinadorTutoriasDashboard />} />
+        <Route path="/control-escolar" element={<ControlEscolarDashboard />} />
+        
         {/* Ruta 404 */}
         <Route path="*" element={<HashNotFoundPage />} />
       </Routes>
@@ -71,13 +76,56 @@ function PerfilLayout() {
   );
 }
 
-// Componente 404 específico para HashRouter
+// Componentes placeholder para las nuevas rutas
+function TutorDashboard() {
+  return (
+    <div className="flex h-screen bg-background">
+      <DynamicSidebar />
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-foreground mb-4">Dashboard Tutor</h1>
+          <p className="text-muted-foreground">Módulo en desarrollo</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CoordinadorTutoriasDashboard() {
+  return (
+    <div className="flex h-screen bg-background">
+      <DynamicSidebar />
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-foreground mb-4">Coordinador de Tutorías</h1>
+          <p className="text-muted-foreground">Módulo en desarrollo</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ControlEscolarDashboard() {
+  return (
+    <div className="flex h-screen bg-background">
+      <DynamicSidebar />
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-foreground mb-4">Control Escolar</h1>
+          <p className="text-muted-foreground">Módulo en desarrollo</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Componente 404 específico para HashRouter - CORREGIDO
 function HashNotFoundPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    console.log('🔍 HashNotFoundPage - Ruta hash:', location.pathname);
+    console.log('🔍 HashNotFoundPage - Ruta actual:', location.pathname, location.hash);
     
     const userData = localStorage.getItem('userData');
     const authToken = localStorage.getItem('authToken');
@@ -87,8 +135,39 @@ function HashNotFoundPage() {
         const user = JSON.parse(userData);
         console.log('🔍 Usuario autenticado encontrado, redirigiendo a:', user.userType);
         
-        // Redirigir al dashboard del usuario
-        navigate(`/${user.userType}`);
+        // ✅ REDIRIGIR SIN # - HashRouter lo maneja automáticamente
+        let redirectPath = '/';
+        
+        switch (user.userType) {
+          case "docente":
+            redirectPath = "/docente";
+            break;
+          case "jefe-departamento":
+            redirectPath = "/jefe-academico";
+            break;
+          case "subdireccion-academica":
+          case "administrador":
+            redirectPath = "/subdirector-academico";
+            break;
+          case "estudiante":
+            redirectPath = "/estudiante";
+            break;
+          case "tutor":
+            redirectPath = "/tutor";
+            break;
+          case "coordinador-tutorias":
+            redirectPath = "/coordinador-tutorias";
+            break;
+          case "control-escolar":
+            redirectPath = "/control-escolar";
+            break;
+          default:
+            redirectPath = "/";
+        }
+        
+        console.log('🔍 Redirigiendo a:', redirectPath);
+        navigate(redirectPath);
+        
       } catch (error) {
         console.error('Error parsing user data:', error);
         navigate('/');
