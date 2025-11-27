@@ -8,7 +8,7 @@ import { Progress } from "../components/progress";
 import { Alert, AlertDescription } from "../components/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/select";
 import logo from '../assets/image.png';
-import axios from 'axios';
+import { authService } from '../services/authService';
 import { Eye, EyeOff, Shield, Users, BarChart3 } from "lucide-react";
 
 export default function RegistroPage() {
@@ -50,7 +50,7 @@ export default function RegistroPage() {
       setIsLoading(true);
       setError("");
       try {
-        const response = await axios.post('https://backend-proy-production.up.railway.app/users/register', {
+        const response = await authService.register({
           firstName: formData.firstName,
           lastName: formData.lastName,
           email: formData.email,
@@ -58,19 +58,38 @@ export default function RegistroPage() {
           userType: formData.userType,
         });
 
-        if (response.status === 201) {
-          if (formData.userType === "docente") {
-            navigate('/docente');
-          } else if (formData.userType === "jefe-academico") {
-            navigate('/jefe-academico');
-          } else if (formData.userType === "subdirector-academico") {
-            navigate('/subdirector-academico');
+        if (response) {
+          // Redirigir según el tipo de usuario
+          switch (formData.userType) {
+            case "docente":
+              navigate('/docente');
+              break;
+            case "jefe-academico":
+            case "jefe-departamento":
+              navigate('/jefe-academico');
+              break;
+            case "subdirector-academico":
+            case "administrador":
+              navigate('/subdirector-academico');
+              break;
+            case "estudiante":
+              navigate('/estudiante');
+              break;
+            case "tutor":
+              navigate('/tutor');
+              break;
+            case "coordinador-tutorias":
+              navigate('/coordinador-tutorias');
+              break;
+            case "control-escolar":
+              navigate('/control-escolar');
+              break;
+            default:
+              navigate('/');
           }
-        } else {
-          setError(response.data.message || "Error en el registro");
         }
-      } catch (err) {
-        setError("Error en la conexión con el servidor");
+      } catch (err: any) {
+        setError(err.response?.data?.message || "Error en el registro");
         console.error("Error de registro:", err);
       } finally {
         setIsLoading(false);
@@ -172,6 +191,10 @@ export default function RegistroPage() {
                           <SelectItem value="subdirector-academico">Subdirector Académico</SelectItem>
                           <SelectItem value="jefe-academico">Jefe Académico</SelectItem>
                           <SelectItem value="docente">Docente</SelectItem>
+                          <SelectItem value="estudiante">Estudiante</SelectItem>
+                          <SelectItem value="tutor">Tutor</SelectItem>
+                          <SelectItem value="coordinador-tutorias">Coordinador de Tutorías</SelectItem>
+                          <SelectItem value="control-escolar">Control Escolar</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -311,7 +334,7 @@ export default function RegistroPage() {
               <div>
                 <h3 className="font-semibold text-foreground mb-1">Tablero de Indicadores</h3>
                 <p className="text-sm text-muted-foreground">
-                  Visualiza métricas académicas en tiempo real con Power BI integrado
+                  Visualiza métricas académicas en tiempo real
                 </p>
               </div>
             </div>
@@ -323,7 +346,7 @@ export default function RegistroPage() {
               <div>
                 <h3 className="font-semibold text-foreground mb-1">Gestión Integral</h3>
                 <p className="text-sm text-muted-foreground">
-                  Administra estudiantes, docentes y recursos académicos desde una plataforma
+                  Administra estudiantes, docentes y recursos académicos
                 </p>
               </div>
             </div>
@@ -335,7 +358,7 @@ export default function RegistroPage() {
               <div>
                 <h3 className="font-semibold text-foreground mb-1">Seguridad Avanzada</h3>
                 <p className="text-sm text-muted-foreground">
-                  Protección de datos institucionales con los más altos estándares de seguridad
+                  Protección de datos institucionales con altos estándares
                 </p>
               </div>
             </div>

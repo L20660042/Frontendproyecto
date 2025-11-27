@@ -6,7 +6,7 @@ import { Input } from "../components/input";
 import { Label } from "../components/label";
 import { Alert, AlertDescription } from "../components/alert";
 import { Eye, EyeOff, Shield, Users, BarChart3 } from "lucide-react";
-import axios from "axios";
+import { authService } from "../services/authService";
 import logo from '../assets/image.png';
 import { Checkbox } from "../components/checkbox";
 
@@ -25,7 +25,6 @@ export default function LoginPage() {
     setIsLoading(true);
     setError("");
 
-    // Validación básica
     if (!email || !password) {
       setError("Por favor completa todos los campos");
       setIsLoading(false);
@@ -40,62 +39,60 @@ export default function LoginPage() {
 
     try {
       console.log("Enviando solicitud de login...");
-      const response = await axios.post("https://backend-proy-production.up.railway.app/users/login", {
-        email,
-        password
-      });
+      const response = await authService.login({ email, password });
 
-      console.log("Respuesta recibida:", response.data);
+      console.log("Respuesta recibida:", response);
 
-      if (response.data.token) {
-        // ✅ AGREGAR AQUÍ EL CÓDIGO DE DEBUG
+      if (response.token && response.user) {
+        localStorage.setItem("authToken", response.token);
+        localStorage.setItem("userData", JSON.stringify(response.user));
+
         console.log("=== DEBUG LOGIN ===");
-        console.log("Datos guardados en localStorage:", {
-          token: response.data.token,
-          user: response.data.user
+        console.log("Datos guardados:", {
+          token: response.token,
+          user: response.user
         });
 
-        localStorage.setItem("authToken", response.data.token);
-        localStorage.setItem("userData", JSON.stringify(response.data.user));
-
-        // ✅ VERIFICAR INMEDIATAMENTE DESPUÉS DE GUARDAR
-        console.log("Verificación localStorage:", {
-          authToken: localStorage.getItem("authToken"),
-          userData: localStorage.getItem("userData")
-        });
-        console.log("=== FIN DEBUG ===");
-
-        console.log("Redirigiendo según userType:", response.data.user.userType);
+        console.log("Redirigiendo según userType:", response.user.userType);
         
-        // Redirección basada en el tipo de usuario
-        switch (response.data.user.userType) {
+        switch (response.user.userType) {
           case "docente":
-          navigate("/docente"); 
-        break;
+            navigate("/docente");
+            break;
           case "jefe-academico":
-          navigate("/jefe-academico");   
-        break;
+          case "jefe-departamento":
+            navigate("/jefe-academico");
+            break;
           case "subdirector-academico":
-          navigate("/subdirector-academico"); 
-        break;
-        default:
-    setError("Tipo de usuario no reconocido.");
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userData");
-}
+          case "administrador":
+            navigate("/subdirector-academico");
+            break;
+          case "estudiante":
+            navigate("/estudiante");
+            break;
+          case "tutor":
+            navigate("/tutor");
+            break;
+          case "coordinador-tutorias":
+            navigate("/coordinador-tutorias");
+            break;
+          case "control-escolar":
+            navigate("/control-escolar");
+            break;
+          default:
+            setError("Tipo de usuario no reconocido.");
+            authService.logout();
+        }
       } else {
         setError("No se recibió token de autenticación.");
       }
     } catch (err: any) {
       console.error("Error completo:", err);
       if (err.response) {
-        // El servidor respondió con un código de error
         setError(err.response.data.error || "Error en el servidor");
       } else if (err.request) {
-        // La solicitud fue hecha pero no se recibió respuesta
         setError("No se pudo conectar con el servidor. Verifica que el backend esté ejecutándose.");
       } else {
-        // Algo pasó en la configuración de la solicitud
         setError("Error de configuración: " + err.message);
       }
     } finally {
@@ -103,7 +100,6 @@ export default function LoginPage() {
     }
   };
 
-  // También puedes agregar este useEffect para verificar el estado al cargar la página
   React.useEffect(() => {
     console.log("=== ESTADO INICIAL LOGIN ===");
     console.log("authToken en localStorage:", localStorage.getItem("authToken"));
@@ -203,7 +199,6 @@ export default function LoginPage() {
                   </Link>
                 </div>
 
-                {/* Términos y condiciones */}
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="terms"
@@ -255,7 +250,7 @@ export default function LoginPage() {
               <div>
                 <h3 className="font-semibold text-foreground mb-1">Tablero de Indicadores</h3>
                 <p className="text-sm text-muted-foreground">
-                  Visualiza métricas académicas en tiempo real con Power BI integrado
+                  Visualiza métricas académicas en tiempo real
                 </p>
               </div>
             </div>
@@ -267,7 +262,7 @@ export default function LoginPage() {
               <div>
                 <h3 className="font-semibold text-foreground mb-1">Gestión Integral</h3>
                 <p className="text-sm text-muted-foreground">
-                  Administra estudiantes, docentes y recursos académicos desde una plataforma
+                  Administra estudiantes, docentes y recursos académicos
                 </p>
               </div>
             </div>
@@ -279,7 +274,7 @@ export default function LoginPage() {
               <div>
                 <h3 className="font-semibold text-foreground mb-1">Seguridad Avanzada</h3>
                 <p className="text-sm text-muted-foreground">
-                  Protección de datos institucionales con los más altos estándares de seguridad
+                  Protección de datos institucionales con altos estándares
                 </p>
               </div>
             </div>

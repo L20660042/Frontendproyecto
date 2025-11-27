@@ -13,6 +13,7 @@ import {
 import { Button } from './button';
 import { cn } from './lib/utils';
 import logo from '../assets/image.png';
+import { authService } from '../services/authService';
 
 interface SidebarProps {
   userType: 'docente' | 'jefe-academico' | 'subdirector-academico';
@@ -184,12 +185,21 @@ export function Sidebar({ userType, userName = 'Usuario', userEmail = 'usuario@e
   );
 }
 
+// En la función DynamicSidebar, actualiza para manejar mejor los datos:
 export function DynamicSidebar() {
-  const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+  const userData = authService.getCurrentUser();
   
+  if (!userData) {
+    return (
+      <div className="w-64 bg-sidebar border-r border-sidebar-border h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Cargando...</p>
+      </div>
+    );
+  }
+
   return (
     <Sidebar
-      userType={userData.userType || 'docente'}
+      userType={(userData.userType as 'docente' | 'jefe-academico' | 'subdirector-academico') || 'docente'}
       userName={`${userData.firstName} ${userData.lastName}`}
       userEmail={userData.email}
     />

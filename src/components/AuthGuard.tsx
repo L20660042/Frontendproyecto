@@ -1,40 +1,31 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { authService } from '../services/authService';
 
-export function useAuthGuard(requiredAuth = true) {
+export function useAuthGuard() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkAuth = () => {
+    const checkAuth = async () => {
       const token = localStorage.getItem('authToken');
       const userData = localStorage.getItem('userData');
-      
-      console.log('=== AUTH GUARD CHECK ===');
-      console.log('Token exists:', !!token);
-      console.log('UserData exists:', !!userData);
-      
-      if (requiredAuth) {
-        // Si requiere autenticación pero no está autenticado
-        if (!token || !userData) {
-          console.log('No autenticado, redirigiendo a login');
-          navigate('/');
-          return false;
-        }
-        
-        try {
-          const user = JSON.parse(userData);
-          console.log('Usuario autenticado:', user.userType);
-          return true;
-        } catch (error) {
-          console.log('Error parsing userData, redirigiendo a login');
-          navigate('/');
-          return false;
-        }
+
+      if (!token || !userData) {
+        console.log('No hay token o datos de usuario, redirigiendo a login');
+        navigate('/');
+        return;
       }
-      
-      return true;
+
+      try {
+        // Verificar si el token es válido intentando obtener el perfil
+        await authService.getProfile();
+      } catch (error) {
+        console.error('Error de autenticación:', error);
+        authService.logout();
+        navigate('/');
+      }
     };
 
     checkAuth();
-  }, [navigate, requiredAuth]);
+  }, [navigate]);
 }
