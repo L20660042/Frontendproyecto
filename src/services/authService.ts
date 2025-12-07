@@ -20,7 +20,37 @@ axios.interceptors.request.use(
   }
 );
 
+// Interceptor para manejar errores globalmente
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error("API Error:", {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+      url: error.config?.url
+    });
+    return Promise.reject(error);
+  }
+);
+
+// Función para mapear roles de frontend a backend
+const mapRoleToBackend = (frontendRole: string) => {
+  const roleMap: Record<string, string> = {
+    'superadmin': 'superadmin',
+    'admin': 'admin',
+    'docente': 'docente',
+    'estudiante': 'estudiante',
+    'jefe_departamento': 'jefe_departamento', // Cambiado para consistencia
+    'tutor': 'tutor',
+    'control_escolar': 'control_escolar', // Cambiado para consistencia
+    'capacitacion': 'capacitacion' // Cambiado para consistencia
+  };
+  return roleMap[frontendRole] || frontendRole;
+};
+
 export const authService = {
+  // ========== AUTENTICACIÓN ==========
   login: async (credentials: { email: string; password: string }) => {
     try {
       const response = await axios.post("/auth/login", credentials);
@@ -64,7 +94,6 @@ export const authService = {
   },
 
   // ========== USUARIOS ==========
-  
   getUsers: async () => {
     try {
       const response = await axios.get("/users");
@@ -84,20 +113,6 @@ export const authService = {
     try {
       console.log("📤 Attempting to create user with data:", userData);
       
-      const mapRoleToBackend = (frontendRole: string) => {
-        const roleMap: Record<string, string> = {
-          'superadmin': 'superadmin',
-          'admin': 'admin',
-          'docente': 'docente',
-          'estudiante': 'estudiante',
-          'jefe-academico': 'jefe_departamento',
-          'tutor': 'tutor',
-          'psicopedagogico': 'control_escolar',
-          'desarrollo-academico': 'capacitacion'
-        };
-        return roleMap[frontendRole] || frontendRole;
-      };
-      
       const formatUserData = (data: any) => {
         return {
           email: data.email,
@@ -113,52 +128,49 @@ export const authService = {
         };
       };
       
-      try {
-        const formattedData = formatUserData(userData);
-        
-        console.log("📤 Sending to /users:", formattedData);
-        const response = await axios.post("/users", formattedData);
-        console.log("✅ Create user via /users response:", response.data);
-        return response.data;
-        
-      } catch (usersError: any) {
-        console.log("❌ /users failed, trying /auth/register:", usersError.response?.data);
-        
-        const registerData = formatUserData(userData);
-        Object.assign(registerData, {
-          name: registerData.fullName,
-          username: userData.email.split('@')[0]
-        });
-        
-        console.log("📤 Sending to /auth/register:", registerData);
-        const response = await axios.post("/auth/register", registerData);
-        console.log("✅ Create user via /auth/register response:", response.data);
-        return response.data;
-      }
+      const formattedData = formatUserData(userData);
+      console.log("📤 Sending to /users:", formattedData);
+      
+      const response = await axios.post("/users", formattedData);
+      console.log("✅ Create user response:", response.data);
+      return response.data;
       
     } catch (error: any) {
       console.error("❌ Error creating user:", error.response?.data || error.message);
-      
-      const errorDetails = error.response?.data;
-      if (errorDetails) {
-        console.error("Error details:", errorDetails);
-        
-        if (errorDetails.errors) {
-          console.error("Validation errors:", errorDetails.errors);
-        }
-      }
-      
       throw error;
     }
   },
 
   updateUser: async (userId: string, userData: any) => {
     try {
-      const response = await axios.patch(`/users/${userId}`, userData);
+      console.log("📤 Actualizando usuario:", userId, userData);
+      
+      // Preparar datos para enviar al backend
+      const dataToSend = {
+        ...userData,
+        role: mapRoleToBackend(userData.role)
+      };
+      
+      // Usar solo PATCH como especifica el backend
+      const response = await axios.patch(`/users/${userId}`, dataToSend);
+      console.log("✅ Usuario actualizado:", response.data);
       return response.data;
+      
     } catch (error: any) {
-      console.error("Error updating user:", error.response?.data || error.message);
-      throw error;
+      console.error("❌ Error al actualizar usuario:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      let errorMessage = 'Error al actualizar usuario';
+      if (error.response?.status === 404) {
+        errorMessage = 'Usuario no encontrado';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      throw new Error(errorMessage);
     }
   },
 
@@ -183,15 +195,20 @@ export const authService = {
   },
 
   // ========== CARRERAS ==========
-  
   getCareers: async () => {
     try {
       const response = await axios.get("/careers");
       console.log("✅ Careers response:", response.data);
-      return response.data;
+      
+      if (response.data.success && Array.isArray(response.data.data)) {
+        return response.data.data;
+      } else if (Array.isArray(response.data)) {
+        return response.data;
+      }
+      return [];
     } catch (error: any) {
       console.error("Error getting careers:", error.response?.data || error.message);
-      return { success: false, data: [] };
+      return [];
     }
   },
 
@@ -205,16 +222,42 @@ export const authService = {
     }
   },
 
-  // ========== MATERIAS ==========
-  
+  updateCareer: async (careerId: string, careerData: any) => {
+    try {
+      console.log("📤 Actualizando carrera:", careerId, careerData);
+      const response = await axios.patch(`/careers/${careerId}`, careerData);
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ Error actualizando carrera:", error.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  deleteCareer: async (careerId: string) => {
+    try {
+      const response = await axios.delete(`/careers/${careerId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error("Error deleting career:", error.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  // ========== MÉTODOS RESTANTES (sin cambios) ==========
   getSubjects: async () => {
     try {
       const response = await axios.get("/subjects");
       console.log("✅ Subjects response:", response.data);
-      return response.data;
+      
+      if (response.data.success && Array.isArray(response.data.data)) {
+        return response.data.data;
+      } else if (Array.isArray(response.data)) {
+        return response.data;
+      }
+      return [];
     } catch (error: any) {
       console.error("Error getting subjects:", error.response?.data || error.message);
-      return { success: false, data: [] };
+      return [];
     }
   },
 
@@ -228,16 +271,41 @@ export const authService = {
     }
   },
 
-  // ========== GRUPOS ==========
-  
+  updateSubject: async (subjectId: string, subjectData: any) => {
+    try {
+      console.log("📤 Actualizando materia:", subjectId, subjectData);
+      const response = await axios.patch(`/subjects/${subjectId}`, subjectData);
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ Error actualizando materia:", error.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  deleteSubject: async (subjectId: string) => {
+    try {
+      const response = await axios.delete(`/subjects/${subjectId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error("Error deleting subject:", error.response?.data || error.message);
+      throw error;
+    }
+  },
+
   getGroups: async () => {
     try {
       const response = await axios.get("/groups");
       console.log("✅ Groups response:", response.data);
-      return response.data;
+      
+      if (response.data.success && Array.isArray(response.data.data)) {
+        return response.data.data;
+      } else if (Array.isArray(response.data)) {
+        return response.data;
+      }
+      return [];
     } catch (error: any) {
       console.error("Error getting groups:", error.response?.data || error.message);
-      return { success: false, data: [] };
+      return [];
     }
   },
 
@@ -251,8 +319,27 @@ export const authService = {
     }
   },
 
-  // ========== TUTORÍAS ==========
-  
+  updateGroup: async (groupId: string, groupData: any) => {
+    try {
+      console.log("📤 Actualizando grupo:", groupId, groupData);
+      const response = await axios.patch(`/groups/${groupId}`, groupData);
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ Error actualizando grupo:", error.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  deleteGroup: async (groupId: string) => {
+    try {
+      const response = await axios.delete(`/groups/${groupId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error("Error deleting group:", error.response?.data || error.message);
+      throw error;
+    }
+  },
+
   getTutorias: async () => {
     try {
       const response = await axios.get("/tutoria");
@@ -273,8 +360,6 @@ export const authService = {
     }
   },
 
-  // ========== CAPACITACIONES ==========
-  
   getCapacitaciones: async () => {
     try {
       const response = await axios.get("/capacitacion");
@@ -295,8 +380,6 @@ export const authService = {
     }
   },
 
-  // ========== ALERTAS ==========
-  
   getAlerts: async () => {
     try {
       const response = await axios.get("/alerts");
@@ -317,8 +400,6 @@ export const authService = {
     }
   },
 
-  // ========== REPORTES ==========
-  
   getReports: async () => {
     try {
       const response = await axios.get("/reports");
@@ -326,6 +407,36 @@ export const authService = {
     } catch (error: any) {
       console.error("Error getting reports:", error.response?.data || error.message);
       return { success: false, data: [] };
+    }
+  },
+
+  getCareerSubjects: async (careerId: string) => {
+    try {
+      const response = await axios.get(`/careers/${careerId}/subjects`);
+      return response.data;
+    } catch (error: any) {
+      console.error("Error getting career subjects:", error.response?.data || error.message);
+      return [];
+    }
+  },
+
+  getSubjectGroups: async (subjectId: string) => {
+    try {
+      const response = await axios.get(`/subjects/${subjectId}/groups`);
+      return response.data;
+    } catch (error: any) {
+      console.error("Error getting subject groups:", error.response?.data || error.message);
+      return [];
+    }
+  },
+
+  getGroupStudents: async (groupId: string) => {
+    try {
+      const response = await axios.get(`/groups/${groupId}/students`);
+      return response.data;
+    } catch (error: any) {
+      console.error("Error getting group students:", error.response?.data || error.message);
+      return [];
     }
   }
 };
