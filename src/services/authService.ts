@@ -36,17 +36,9 @@ axios.interceptors.response.use(
 
 // Función para mapear roles de frontend a backend
 const mapRoleToBackend = (frontendRole: string) => {
-  const roleMap: Record<string, string> = {
-    'superadmin': 'superadmin',
-    'admin': 'admin',
-    'docente': 'docente',
-    'estudiante': 'estudiante',
-    'jefe_departamento': 'jefe_departamento', // Cambiado para consistencia
-    'tutor': 'tutor',
-    'control_escolar': 'control_escolar', // Cambiado para consistencia
-    'capacitacion': 'capacitacion' // Cambiado para consistencia
-  };
-  return roleMap[frontendRole] || frontendRole;
+  // Ya que frontend y backend usan los mismos nombres según el enum,
+  // simplemente devolvemos el mismo rol
+  return frontendRole;
 };
 
 export const authService = {

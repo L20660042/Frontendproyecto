@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "../components/alert";
 import { Eye, EyeOff, Shield, Users, BarChart3 } from "lucide-react";
 import { authService } from "../services/authService";
 import logo from '../assets/image.png';
-import { Checkbox } from "../components/checkbox";  // ✔ shadcn checkbox
+import { Checkbox } from "../components/checkbox";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -45,60 +45,85 @@ export default function LoginPage() {
 
       console.log("Respuesta del backend:", response);
 
-      // ✔ ADAPTADO A TU BACKEND NESTJS:
+      // Extraer token y usuario
       const token = response?.data?.token;
       const user = response?.data?.user;
 
+      console.log("Token recibido:", token ? "✓ Presente" : "✗ Ausente");
+      console.log("Usuario recibido:", user);
+      console.log("Rol del usuario:", user?.role);
+
       if (!token || !user) {
-        setError("No se recibió token de autenticación.");
+        setError("No se recibió token de autenticación o información del usuario.");
         setIsLoading(false);
         return;
       }
 
+      // Guardar en localStorage
       localStorage.setItem("authToken", token);
       localStorage.setItem("userData", JSON.stringify(user));
 
-      console.log("Token y usuario almacenados:");
-      console.log(token, user);
+      console.log("✅ Token y usuario almacenados en localStorage");
+      console.log("🎯 Rol para redirección:", user.role);
 
-      // ✔ Redirección por rol
-switch (user.role) {
-  case "superadmin":
-    navigate("/dashboard/superadmin");
-    break;
-  case "admin":
-    navigate("/dashboard/admin");
-    break;
-  case "docente":
-    navigate("/docente");
-    break;
-  case "estudiante":
-    navigate("/estudiante");
-    break;
-  case "jefe-academico":
-    navigate("/jefe-academico");
-    break;
-  case "tutor":
-    navigate("/tutor");
-    break;
-  case "psicopedagogico":
-    navigate("/psicopedagogico");
-    break;
-  case "desarrollo-academico":
-    navigate("/desarrollo-academico");
-    break;
-  default:
-    navigate("/dashboard");
-}
+      // Determinar la ruta de redirección según el rol
+      let redirectPath = "/dashboard";
+      
+      switch (user.role) {
+        case "superadmin":
+          redirectPath = "/dashboard/superadmin";
+          break;
+        case "admin":
+          redirectPath = "/dashboard/admin";
+          break;
+        case "docente":
+          redirectPath = "/docente";
+          break;
+        case "estudiante":
+          redirectPath = "/estudiante";
+          break;
+        case "jefe_departamento":
+          redirectPath = "/jefe-academico";
+          break;
+        case "tutor":
+          redirectPath = "/tutor";
+          break;
+        case "control_escolar":
+          redirectPath = "/psicopedagogico";
+          break;
+        case "capacitacion":
+          redirectPath = "/desarrollo-academico";
+          break;
+        default:
+          console.warn("⚠️ Rol no reconocido:", user.role);
+          redirectPath = "/dashboard";
+      }
+
+      console.log("🔀 Redirigiendo a:", redirectPath);
+      
+      // Solo UNA llamada a navigate
+      navigate(redirectPath, { replace: true });
+
     } catch (err: any) {
-      console.error("Error completo:", err);
+      console.error("❌ Error completo:", err);
 
-      if (err.response)
-        setError(err.response.data.error || "Error en el servidor");
-      else if (err.request)
+      if (err.response) {
+        console.error("Detalles del error:", {
+          status: err.response.status,
+          data: err.response.data,
+          url: err.response.config?.url
+        });
+        
+        setError(
+          err.response.data?.error || 
+          err.response.data?.message || 
+          "Error en el servidor"
+        );
+      } else if (err.request) {
         setError("No se pudo conectar con el servidor. Verifica el backend.");
-      else
+      } else {
         setError("Error inesperado: " + err.message);
+      }
     } finally {
       setIsLoading(false);
     }
