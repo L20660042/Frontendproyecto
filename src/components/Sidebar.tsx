@@ -125,7 +125,7 @@ export function Sidebar({
 }: SidebarProps) {
   const handleLogout = () => {
     authService.logout();
-    window.location.href = '/';
+    window.location.href = '/Frontendproyecto';
   };
 
   // Obtener menú para el rol actual
