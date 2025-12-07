@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "../components/alert";
 import { Eye, EyeOff, Shield, Users, BarChart3 } from "lucide-react";
 import { authService } from "../services/authService";
 import logo from '../assets/image.png';
-import { Checkbox } from "../components/checkbox";
+import { Checkbox } from "../components/checkbox";  // ✔ shadcn checkbox
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -18,10 +18,12 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     setIsLoading(true);
     setError("");
 
@@ -41,70 +43,66 @@ export default function LoginPage() {
       console.log("Enviando solicitud de login...");
       const response = await authService.login({ email, password });
 
-      console.log("Respuesta recibida:", response);
+      console.log("Respuesta del backend:", response);
 
-      if (response.token && response.user) {
-        localStorage.setItem("authToken", response.token);
-        localStorage.setItem("userData", JSON.stringify(response.user));
+      // ✔ ADAPTADO A TU BACKEND NESTJS:
+      const token = response?.data?.token;
+      const user = response?.data?.user;
 
-        console.log("=== DEBUG LOGIN ===");
-        console.log("Datos guardados:", {
-          token: response.token,
-          user: response.user
-        });
+      if (!token || !user) {
+        setError("No se recibió token de autenticación.");
+        setIsLoading(false);
+        return;
+      }
 
-        console.log("Redirigiendo según userType:", response.user.userType);
-        
-        switch (response.user.userType) {
+      localStorage.setItem("authToken", token);
+      localStorage.setItem("userData", JSON.stringify(user));
+
+      console.log("Token y usuario almacenados:");
+      console.log(token, user);
+
+      // ✔ Redirección por rol
+switch (user.role) {
+  case "superadmin":
+    navigate("/dashboard/superadmin");
+    break;
+  case "admin":
+    navigate("/dashboard/admin");
+    break;
   case "docente":
     navigate("/docente");
-    break;
-  case "jefe-departamento":
-    navigate("/jefe-academico");
-    break;
-  case "subdireccion-academica":
-  case "administrador":
-    navigate("/subdirector-academico");
     break;
   case "estudiante":
     navigate("/estudiante");
     break;
+  case "jefe-academico":
+    navigate("/jefe-academico");
+    break;
   case "tutor":
     navigate("/tutor");
     break;
-  case "coordinador-tutorias":
-    navigate("/coordinador-tutorias");
+  case "psicopedagogico":
+    navigate("/psicopedagogico");
     break;
-  case "control-escolar":
-    navigate("/control-escolar");
+  case "desarrollo-academico":
+    navigate("/desarrollo-academico");
     break;
   default:
-    setError("Tipo de usuario no reconocido.");
-    authService.logout();
+    navigate("/dashboard");
 }
-      } else {
-        setError("No se recibió token de autenticación.");
-      }
     } catch (err: any) {
       console.error("Error completo:", err);
-      if (err.response) {
+
+      if (err.response)
         setError(err.response.data.error || "Error en el servidor");
-      } else if (err.request) {
-        setError("No se pudo conectar con el servidor. Verifica que el backend esté ejecutándose.");
-      } else {
-        setError("Error de configuración: " + err.message);
-      }
+      else if (err.request)
+        setError("No se pudo conectar con el servidor. Verifica el backend.");
+      else
+        setError("Error inesperado: " + err.message);
     } finally {
       setIsLoading(false);
     }
   };
-
-  React.useEffect(() => {
-    console.log("=== ESTADO INICIAL LOGIN ===");
-    console.log("authToken en localStorage:", localStorage.getItem("authToken"));
-    console.log("userData en localStorage:", localStorage.getItem("userData"));
-    console.log("=============================");
-  }, []);
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -128,12 +126,14 @@ export default function LoginPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
+                
                 {error && (
                   <Alert variant="destructive">
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 )}
 
+                {/* Email */}
                 <div className="space-y-2">
                   <Label htmlFor="email">Correo Electrónico</Label>
                   <Input
@@ -148,6 +148,7 @@ export default function LoginPage() {
                   />
                 </div>
 
+                {/* Password */}
                 <div className="space-y-2">
                   <Label htmlFor="password">Contraseña</Label>
                   <div className="relative">
@@ -178,31 +179,25 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="remember"
-                      checked={rememberMe}
-                      onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                      disabled={isLoading}
-                    />
-                    <Label htmlFor="remember" className="text-sm">
-                      Recordarme
-                    </Label>
-                  </div>
-                  <Link
-                    to="/forgot-password"
-                    className="text-sm text-primary hover:text-primary/80 transition-colors"
-                  >
-                    ¿Olvidaste tu contraseña?
-                  </Link>
+                {/* Recordarme */}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="remember"
+                    checked={rememberMe}
+                    onCheckedChange={(checked) => setRememberMe(Boolean(checked))}
+                    disabled={isLoading}
+                  />
+                  <Label htmlFor="remember" className="text-sm">
+                    Recordarme
+                  </Label>
                 </div>
 
+                {/* Términos */}
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="terms"
                     checked={acceptedTerms}
-                    onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
+                    onCheckedChange={(checked) => setAcceptedTerms(Boolean(checked))}
                     disabled={isLoading}
                   />
                   <Label htmlFor="terms" className="text-sm">
@@ -242,6 +237,7 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-6">
+            {/* Cards informativas */}
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
                 <BarChart3 className="w-6 h-6 text-primary" />
@@ -277,6 +273,7 @@ export default function LoginPage() {
                 </p>
               </div>
             </div>
+
           </div>
         </div>
       </div>
