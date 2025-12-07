@@ -2,10 +2,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../components/button';
 import { Badge } from '../../components/badge';
 import { BookOpen } from 'lucide-react';
+import { DynamicSidebar } from '../../components/Sidebar';
 
 export default function DesarrolloAcademicoDashboard() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background">
+  <DynamicSidebar />
+  <div className="flex-1"></div>
       <header className="bg-card border-b border-border p-6">
         <div className="flex justify-between items-center">
           <div>
