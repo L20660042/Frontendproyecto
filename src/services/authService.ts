@@ -648,26 +648,83 @@ toggleGroupStatus: async (groupId: string) => {
   }
 },
 
-  // ========== TUTORÍAS ==========
-  getTutorias: async () => {
-    try {
-      const response = await axios.get("/tutoria");
-      return response.data;
-    } catch (error: any) {
-      console.error("Error getting tutorias:", error.response?.data || error.message);
-      return { success: false, data: [] };
+ // ========== TUTORÍAS ==========
+getTutorias: async () => {
+  try {
+    const response = await axios.get("/tutoria");
+    console.log("✅ Tutorias response:", response.data);
+    
+    if (response.data.success && Array.isArray(response.data.data)) {
+      return { success: true, data: response.data.data };
+    } else if (Array.isArray(response.data)) {
+      return { success: true, data: response.data };
     }
-  },
+    return { success: true, data: [] };
+  } catch (error: any) {
+    console.error("Error getting tutorias:", error.response?.data || error.message);
+    return { success: false, data: [], message: error.message };
+  }
+},
 
-  createTutoria: async (tutoriaData: any) => {
-    try {
-      const response = await axios.post("/tutoria", tutoriaData);
-      return response.data;
-    } catch (error: any) {
-      console.error("Error creating tutoria:", error.response?.data || error.message);
-      throw error;
-    }
-  },
+createTutoria: async (tutoriaData: any) => {
+  try {
+    console.log("📤 Creando tutoría:", tutoriaData);
+    
+    const formattedData = {
+      tutor: tutoriaData.tutorId,
+      student: tutoriaData.studentId,
+      group: tutoriaData.groupId,
+      date: tutoriaData.date,
+      topics: tutoriaData.topics || '',
+      agreements: tutoriaData.agreements || '',
+      observations: tutoriaData.observations || '',
+      riskDetected: tutoriaData.riskDetected || false
+    };
+    
+    console.log("📤 Enviando al backend:", formattedData);
+    const response = await axios.post("/tutoria", formattedData);
+    console.log("✅ Tutoría creada:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("Error creating tutoria:", error.response?.data || error.message);
+    throw error;
+  }
+},
+
+updateTutoria: async (tutoriaId: string, tutoriaData: any) => {
+  try {
+    console.log("📤 Actualizando tutoría:", tutoriaId, tutoriaData);
+    
+    const formattedData = {
+      tutor: tutoriaData.tutorId,
+      student: tutoriaData.studentId,
+      group: tutoriaData.groupId,
+      date: tutoriaData.date,
+      topics: tutoriaData.topics || '',
+      agreements: tutoriaData.agreements || '',
+      observations: tutoriaData.observations || '',
+      riskDetected: tutoriaData.riskDetected || false
+    };
+    
+    console.log("📤 Enviando al backend:", formattedData);
+    const response = await axios.patch(`/tutoria/${tutoriaId}`, formattedData);
+    console.log("✅ Tutoría actualizada:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ Error actualizando tutoría:", error.response?.data || error.message);
+    throw error;
+  }
+},
+
+deleteTutoria: async (tutoriaId: string) => {
+  try {
+    const response = await axios.delete(`/tutoria/${tutoriaId}`);
+    return response.data;
+  } catch (error: any) {
+    console.error("Error deleting tutoria:", error.response?.data || error.message);
+    throw error;
+  }
+},
 
   // ========== CAPACITACIONES ==========
   getCapacitaciones: async () => {

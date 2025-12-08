@@ -14,6 +14,7 @@ import UsersTable from '../../components/users/UsersTable';
 import CareersTable from '../../components/careers/CareersTable';
 import SubjectsTable from '../../components/subjects/SubjectsTable';
 import GroupsTable from '../../components/groups/GroupsTable';
+import TutoriasTable from '../../components/tutorias/TutoriasTable';
 
 // Importar modales
 import CreateUserModal from '../../components/users/CreateUserModal';
@@ -28,6 +29,9 @@ import EditSubjectModal from '../../components/subjects/EditSubjectModal';
 import CreateGroupModal from '../../components/groups/CreateGroupModal';
 import GroupDetailsModal from '../../components/groups/GroupDetailsModal';
 import EditGroupModal from '../../components/groups/EditGroupModal';
+import CreateTutoriaModal from '../../components/tutorias/CreateTutoriaModal';
+import TutoriaDetailsModal from '../../components/tutorias/TutoriaDetailsModal';
+import EditTutoriaModal from '../../components/tutorias/EditTutoriaModal';
 
 // Interfaces
 interface User {
@@ -88,12 +92,34 @@ interface Group {
   createdAt?: string;
 }
 
+interface Tutoria {
+  _id: string;
+  tutor: string | { _id: string; firstName: string; lastName: string };
+  tutorId?: string;
+  tutorName?: string;
+  student: string | { _id: string; firstName: string; lastName: string };
+  studentId?: string;
+  studentName?: string;
+  group: string | { _id: string; name: string; code: string };
+  groupId?: string;
+  groupName?: string;
+  date: string;
+  topics?: string;
+  agreements?: string;
+  observations?: string;
+  riskDetected?: boolean;
+  followUps?: string[];
+  createdAt?: string;
+}
+
+
 export default function SuperAdminDashboard() {
   const [currentView, setCurrentView] = useState('dashboard');
   const [users, setUsers] = useState<User[]>([]);
   const [careers, setCareers] = useState<Career[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [tutorias, setTutorias] = useState<Tutoria[]>([]);
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -106,22 +132,26 @@ export default function SuperAdminDashboard() {
   const [selectedCareer, setSelectedCareer] = useState<Career | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+  const [selectedTutoria, setSelectedTutoria] = useState<Tutoria | null>(null);
   
   // Estados para modales
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [showCreateCareer, setShowCreateCareer] = useState(false);
   const [showCreateSubject, setShowCreateSubject] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [showCreateTutoria, setShowCreateTutoria] = useState(false);
   
   const [showUserDetails, setShowUserDetails] = useState(false);
   const [showCareerDetails, setShowCareerDetails] = useState(false);
   const [showSubjectDetails, setShowSubjectDetails] = useState(false);
   const [showGroupDetails, setShowGroupDetails] = useState(false);
+  const [showTutoriaDetails, setShowTutoriaDetails] = useState(false);
   
   const [showEditUser, setShowEditUser] = useState(false);
   const [showEditCareer, setShowEditCareer] = useState(false);
   const [showEditSubject, setShowEditSubject] = useState(false);
   const [showEditGroup, setShowEditGroup] = useState(false);
+  const [showEditTutoria, setShowEditTutoria] = useState(false);
 
   // Cargar datos
   const loadAllData = async () => {
@@ -274,6 +304,57 @@ export default function SuperAdminDashboard() {
         console.log("ℹ️ Grupos endpoint no disponible aún o error:", err.message);
       }
       
+      // Cargar tutorías
+      try {
+        console.log("📥 Intentando cargar tutorías...");
+        const tutoriasResponse = await authService.getTutorias();
+        let tutoriasData: Tutoria[] = [];
+        
+        console.log("📊 Tutorias response:", tutoriasResponse);
+        
+        if (tutoriasResponse.success && Array.isArray(tutoriasResponse.data)) {
+          tutoriasData = tutoriasResponse.data;
+        } else if (Array.isArray(tutoriasResponse)) {
+          tutoriasData = tutoriasResponse;
+        } else if (tutoriasResponse.data && Array.isArray(tutoriasResponse.data)) {
+          tutoriasData = tutoriasResponse.data;
+        }
+        
+        // Enriquecer con detalles
+        const tutoriasWithDetails = tutoriasData.map((tutoria: any) => {
+          const tutorId = tutoria.tutor?._id || tutoria.tutor || '';
+          const studentId = tutoria.student?._id || tutoria.student || '';
+          const groupId = tutoria.group?._id || tutoria.group || '';
+          
+          const tutor = users.find(u => u._id === tutorId);
+          const student = users.find(u => u._id === studentId);
+          const group = groups.find(g => g._id === groupId);
+          
+          return {
+            ...tutoria,
+            tutorId,
+            tutorName: tutor 
+              ? `${tutor.firstName} ${tutor.lastName}`
+              : tutoria.tutor?.firstName 
+                ? `${tutoria.tutor.firstName} ${tutoria.tutor.lastName}`
+                : 'Desconocido',
+            studentId,
+            studentName: student
+              ? `${student.firstName} ${student.lastName}`
+              : tutoria.student?.firstName
+                ? `${tutoria.student.firstName} ${tutoria.student.lastName}`
+                : 'Desconocido',
+            groupId,
+            groupName: group?.name || tutoria.group?.name || 'Desconocido'
+          };
+        });
+        
+        setTutorias(tutoriasWithDetails);
+        console.log("📝 Tutorías cargadas:", tutoriasWithDetails.length);
+      } catch (err: any) {
+        console.log("ℹ️ Tutorías endpoint no disponible aún o error:", err.message);
+      }
+      
       console.log("✅ Todos los datos cargados exitosamente");
       
     } catch (err: any) {
@@ -391,6 +472,22 @@ export default function SuperAdminDashboard() {
     }
   };
 
+  // Handlers para tutorías
+  const handleDeleteTutoria = async (tutoriaId: string) => {
+    if (window.confirm('¿Estás seguro de eliminar esta tutoría?')) {
+      try {
+        setLoading(true);
+        await authService.deleteTutoria(tutoriaId);
+        setSuccess('✅ Tutoría eliminada correctamente');
+        loadAllData();
+      } catch (err: any) {
+        setError('❌ Error al eliminar tutoría: ' + (err.message || 'Error desconocido'));
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   // Limpiar mensajes después de un tiempo
   useEffect(() => {
     if (error || success || infoMessage) {
@@ -414,6 +511,7 @@ export default function SuperAdminDashboard() {
               careers={careers}
               subjects={subjects}
               groups={groups}
+              tutorias={tutorias}
             />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -508,6 +606,26 @@ export default function SuperAdminDashboard() {
             }}
             onDeleteGroup={handleDeleteGroup}
             onToggleGroupStatus={handleToggleGroupStatus}
+          />
+        );
+
+      case 'tutorias':
+        return (
+          <TutoriasTable
+            tutorias={tutorias}
+            loading={loading}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            onCreateTutoria={() => setShowCreateTutoria(true)}
+            onViewDetails={(tutoria) => {
+              setSelectedTutoria(tutoria);
+              setShowTutoriaDetails(true);
+            }}
+            onEditTutoria={(tutoria) => {
+              setSelectedTutoria(tutoria);
+              setShowEditTutoria(true);
+            }}
+            onDeleteTutoria={handleDeleteTutoria}
           />
         );
 
@@ -774,6 +892,55 @@ export default function SuperAdminDashboard() {
             loadAllData();
             setShowEditGroup(false);
             setSelectedGroup(null);
+          }} 
+          onError={setError} 
+        />
+      )}
+
+      {/* Modales de TUTORÍAS */}
+      {showCreateTutoria && (
+        <CreateTutoriaModal 
+          users={users}
+          groups={groups}
+          isOpen={showCreateTutoria} 
+          onClose={() => setShowCreateTutoria(false)} 
+          onCreate={() => {
+            loadAllData();
+            setShowCreateTutoria(false);
+          }} 
+          onError={setError} 
+        />
+      )}
+      
+      {showTutoriaDetails && selectedTutoria && (
+        <TutoriaDetailsModal 
+          tutoria={selectedTutoria} 
+          isOpen={showTutoriaDetails} 
+          onClose={() => {
+            setShowTutoriaDetails(false);
+            setSelectedTutoria(null);
+          }} 
+          onEdit={() => {
+            setShowTutoriaDetails(false);
+            setShowEditTutoria(true);
+          }} 
+        />
+      )}
+      
+      {showEditTutoria && selectedTutoria && (
+        <EditTutoriaModal 
+          tutoria={selectedTutoria} 
+          users={users}
+          groups={groups}
+          isOpen={showEditTutoria} 
+          onClose={() => {
+            setShowEditTutoria(false);
+            setSelectedTutoria(null);
+          }} 
+          onUpdate={() => {
+            loadAllData();
+            setShowEditTutoria(false);
+            setSelectedTutoria(null);
           }} 
           onError={setError} 
         />
