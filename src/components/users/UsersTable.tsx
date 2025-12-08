@@ -13,6 +13,7 @@ interface UsersTableProps {
   onViewDetails: (user: any) => void;
   onEditUser: (user: any) => void;
   onDeleteUser: (userId: string) => void;
+  onToggleUserStatus?: (userId: string) => void; // <-- Agregar esta línea
 }
 
 const availableRoles = [

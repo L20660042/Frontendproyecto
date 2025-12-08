@@ -1,4 +1,4 @@
-// SuperAdminDashboard.tsx (versión FINAL COMPLETA)
+// SuperAdminDashboard.tsx
 import { useState, useEffect } from 'react';
 import { DynamicSidebar } from '../../components/Sidebar';
 import { Alert, AlertDescription } from '../../components/alert';
@@ -125,58 +125,88 @@ export default function SuperAdminDashboard() {
       setSuccess('');
       setInfoMessage('');
       
+      console.log("🔄 Cargando todos los datos...");
+      
       // Cargar usuarios
-      const usersResponse = await authService.getUsers();
-      if (Array.isArray(usersResponse)) {
-        setUsers(usersResponse);
-      } else if (usersResponse.data && Array.isArray(usersResponse.data)) {
-        setUsers(usersResponse.data);
+      try {
+        console.log("📥 Intentando cargar usuarios...");
+        const usersResponse = await authService.getUsers();
+        if (Array.isArray(usersResponse)) {
+          setUsers(usersResponse);
+        } else if (usersResponse.data && Array.isArray(usersResponse.data)) {
+          setUsers(usersResponse.data);
+        } else if (usersResponse.success && Array.isArray(usersResponse.data)) {
+          setUsers(usersResponse.data);
+        }
+        console.log("👥 Usuarios cargados:", users.length);
+      } catch (err: any) {
+        console.log("ℹ️ Usuarios endpoint error:", err.message);
       }
       
       // Cargar carreras
       try {
+        console.log("📥 Intentando cargar carreras...");
         const careersResponse = await authService.getCareers();
         if (careersResponse.success && Array.isArray(careersResponse.data)) {
           setCareers(careersResponse.data);
         } else if (Array.isArray(careersResponse)) {
           setCareers(careersResponse);
         }
+        console.log("🎓 Carreras cargadas:", careers.length);
       } catch (err: any) {
         console.log("ℹ️ Carreras endpoint no disponible aún o error:", err.message);
         setInfoMessage('Algunos endpoints pueden no estar disponibles todavía');
       }
       
-      // Cargar materias
+      // Cargar materias - CORREGIDO
       try {
+        console.log("📥 Intentando cargar materias...");
         const subjectsResponse = await authService.getSubjects();
         let subjectsData: Subject[] = [];
+        
+        console.log("📊 Subjects response:", subjectsResponse);
+        
         if (subjectsResponse.success && Array.isArray(subjectsResponse.data)) {
           subjectsData = subjectsResponse.data;
         } else if (Array.isArray(subjectsResponse)) {
           subjectsData = subjectsResponse;
+        } else if (subjectsResponse.data && Array.isArray(subjectsResponse.data)) {
+          subjectsData = subjectsResponse.data;
         }
         
-        // Enriquecer con nombres de carreras
-        const subjectsWithCareerName = subjectsData.map((subject: any) => ({
-          ...subject,
-          careerName: careers.find(c => c._id === subject.careerId)?.name || 'Desconocida'
-        }));
-        setSubjects(subjectsWithCareerName);
+        // Si el backend no devuelve careerName, enriquecer con datos de carreras
+        const enrichedSubjects = subjectsData.map((subject: any) => {
+          const career = careers.find(c => c._id === subject.careerId || c._id === subject.career?._id);
+          return {
+            ...subject,
+            careerId: subject.careerId || subject.career?._id || '',
+            careerName: subject.careerName || career?.name || 'Desconocida',
+            status: subject.status || (subject.active ? 'active' : 'inactive'),
+            credits: subject.credits || 4,
+            semester: subject.semester || 1
+          };
+        });
+        
+        setSubjects(enrichedSubjects);
+        console.log("✅ Subjects loaded:", enrichedSubjects.length);
       } catch (err: any) {
         console.log("ℹ️ Materias endpoint no disponible aún o error:", err.message);
+        // No mostrar error si el endpoint no está disponible
       }
       
-      // Cargar grupos
+      // Cargar grupos - CORREGIDO (después de cargar subjects)
       try {
+        console.log("📥 Intentando cargar grupos...");
         const groupsResponse = await authService.getGroups();
         let groupsData: Group[] = [];
+        
         if (groupsResponse.success && Array.isArray(groupsResponse.data)) {
           groupsData = groupsResponse.data;
         } else if (Array.isArray(groupsResponse)) {
           groupsData = groupsResponse;
         }
         
-        // Enriquecer con detalles
+        // Enriquecer con detalles usando los datos ya cargados
         const groupsWithDetails = groupsData.map((group: any) => ({
           ...group,
           careerName: careers.find(c => c._id === group.careerId)?.name || 'Desconocida',
@@ -186,9 +216,12 @@ export default function SuperAdminDashboard() {
             'Sin asignar'
         }));
         setGroups(groupsWithDetails);
+        console.log("👥 Grupos cargados:", groupsWithDetails.length);
       } catch (err: any) {
         console.log("ℹ️ Grupos endpoint no disponible aún o error:", err.message);
       }
+      
+      console.log("✅ Todos los datos cargados exitosamente");
       
     } catch (err: any) {
       console.error("❌ Error loading data:", err);
@@ -203,10 +236,11 @@ export default function SuperAdminDashboard() {
   }, []);
 
   // Handlers para usuarios
-  const handleDeleteUser = async () => {
+  const handleDeleteUser = async (userId: string) => {
     if (window.confirm('¿Estás seguro de eliminar este usuario? Esta acción no se puede deshacer.')) {
       try {
         setLoading(true);
+        await authService.deleteUser(userId);
         setSuccess('✅ Usuario eliminado correctamente');
         loadAllData();
       } catch (err: any) {
@@ -217,9 +251,10 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  const handleToggleUserStatus = async (_id: string) => {
+  const handleToggleUserStatus = async (userId: string) => {
     try {
       setLoading(true);
+      await authService.toggleUserStatus(userId);
       setSuccess('✅ Estado del usuario actualizado');
       loadAllData();
     } catch (err: any) {
@@ -230,10 +265,11 @@ export default function SuperAdminDashboard() {
   };
 
   // Handlers para carreras
-  const handleDeleteCareer = async () => {
+  const handleDeleteCareer = async (careerId: string) => {
     if (window.confirm('¿Estás seguro de eliminar esta carrera? Esto también eliminará las materias asociadas.')) {
       try {
         setLoading(true);
+        await authService.deleteCareer(careerId);
         setSuccess('✅ Carrera eliminada correctamente');
         loadAllData();
       } catch (err: any) {
@@ -244,11 +280,12 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  // Handlers para materias
-  const handleDeleteSubject = async () => {
+  // Handlers para materias - CORREGIDOS
+  const handleDeleteSubject = async (subjectId: string) => {
     if (window.confirm('¿Estás seguro de eliminar esta materia? Esto también eliminará los grupos asociados.')) {
       try {
         setLoading(true);
+        await authService.deleteSubject(subjectId);
         setSuccess('✅ Materia eliminada correctamente');
         loadAllData();
       } catch (err: any) {
@@ -259,11 +296,25 @@ export default function SuperAdminDashboard() {
     }
   };
 
+  const handleToggleSubjectStatus = async (subjectId: string) => {
+    try {
+      setLoading(true);
+      await authService.toggleSubjectStatus(subjectId);
+      setSuccess('✅ Estado de la materia actualizado');
+      loadAllData();
+    } catch (err: any) {
+      setError('❌ Error al cambiar estado: ' + (err.message || 'Error desconocido'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handlers para grupos
-  const handleDeleteGroup = async () => {
+  const handleDeleteGroup = async (groupId: string) => {
     if (window.confirm('¿Estás seguro de eliminar este grupo?')) {
       try {
         setLoading(true);
+        await authService.deleteGroup(groupId);
         setSuccess('✅ Grupo eliminado correctamente');
         loadAllData();
       } catch (err: any) {
@@ -328,6 +379,7 @@ export default function SuperAdminDashboard() {
               setShowEditUser(true);
             }}
             onDeleteUser={handleDeleteUser}
+            onToggleUserStatus={handleToggleUserStatus}
           />
         );
 
@@ -368,6 +420,7 @@ export default function SuperAdminDashboard() {
               setShowEditSubject(true);
             }}
             onDeleteSubject={handleDeleteSubject}
+            onToggleSubjectStatus={handleToggleSubjectStatus}
           />
         );
 
@@ -485,12 +538,12 @@ export default function SuperAdminDashboard() {
           onEdit={() => {
             setShowUserDetails(false);
             setShowEditUser(true);
-          }} 
+          }}
           onToggleStatus={() => {
             handleToggleUserStatus(selectedUser._id);
             setShowUserDetails(false);
             setSelectedUser(null);
-          }} 
+          }}
         />
       )}
       
@@ -581,7 +634,12 @@ export default function SuperAdminDashboard() {
           onEdit={() => {
             setShowSubjectDetails(false);
             setShowEditSubject(true);
-          }} 
+          }}
+          onToggleStatus={() => {
+            handleToggleSubjectStatus(selectedSubject._id);
+            setShowSubjectDetails(false);
+            setSelectedSubject(null);
+          }}
         />
       )}
       
@@ -608,7 +666,7 @@ export default function SuperAdminDashboard() {
         <CreateGroupModal 
           careers={careers} 
           subjects={subjects} 
-          users={users} 
+          users={users.filter(u => u.role === 'docente' || u.role === 'teacher')} 
           isOpen={showCreateGroup} 
           onClose={() => setShowCreateGroup(false)} 
           onCreate={() => {
@@ -639,7 +697,7 @@ export default function SuperAdminDashboard() {
           group={selectedGroup} 
           careers={careers} 
           subjects={subjects} 
-          users={users} 
+          users={users.filter(u => u.role === 'docente' || u.role === 'teacher')} 
           isOpen={showEditGroup} 
           onClose={() => {
             setShowEditGroup(false);

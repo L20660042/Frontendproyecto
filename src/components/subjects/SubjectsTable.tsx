@@ -5,6 +5,7 @@ import { Badge } from '../../components/badge';
 import { Input } from '../../components/input';
 import { Search, PlusCircle, EyeIcon, Edit, Trash2 } from 'lucide-react';
 
+
 interface SubjectsTableProps {
   subjects: any[];
   loading: boolean;
@@ -14,6 +15,7 @@ interface SubjectsTableProps {
   onViewDetails: (subject: any) => void;
   onEditSubject: (subject: any) => void;
   onDeleteSubject: (subjectId: string) => void;
+  onToggleSubjectStatus?: (subjectId: string) => void; // <-- Agregar esta línea
 }
 
 export default function SubjectsTable({

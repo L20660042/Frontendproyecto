@@ -9,6 +9,7 @@ interface CareerDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onEdit: () => void;
+  onToggleStatus?: () => void; 
 }
 
 export default function CareerDetailsModal({ 

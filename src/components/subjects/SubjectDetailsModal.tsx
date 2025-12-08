@@ -9,6 +9,7 @@ interface SubjectDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onEdit: () => void;
+  onToggleStatus?: () => void; 
 }
 
 export default function SubjectDetailsModal({ 
