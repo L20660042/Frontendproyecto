@@ -768,16 +768,189 @@ deleteTutoria: async (tutoriaId: string) => {
     }
   },
 
-  // ========== REPORTES ==========
-  getReports: async () => {
-    try {
-      const response = await axios.get("/reports");
-      return response.data;
-    } catch (error: any) {
-      console.error("Error getting reports:", error.response?.data || error.message);
-      return { success: false, data: [] };
+
+// ========== REPORTES ==========
+
+getReports: async (filters?: any) => {
+  try {
+    console.log('📊 Solicitando reportes con filtros:', filters);
+    
+    const response = await axios.get("/reports/list", {
+      params: {
+        ...filters,
+        page: filters?.page || 1,
+        limit: filters?.limit || 100
+      }
+    });
+    
+    console.log("✅ Reports list response FULL:", response.data);
+    
+    // VERIFICAR LA ESTRUCTURA ANIDADA
+    if (response.data && response.data.success === true) {
+      // CASO 1: Estructura {success, data: {data: [...], pagination: {...}}}
+      if (response.data.data && response.data.data.data) {
+        console.log(`📊 Reportes encontrados en data.data:`, response.data.data.data.length);
+        return {
+          success: true,
+          data: response.data.data.data,  // <-- ¡ESTA ES LA CLAVE!
+          pagination: response.data.data.pagination,
+          count: response.data.data.data.length
+        };
+      }
+      // CASO 2: Estructura directa {success, data: [...], pagination: {...}}
+      else if (Array.isArray(response.data.data)) {
+        console.log(`📊 Reportes encontrados en data:`, response.data.data.length);
+        return {
+          success: true,
+          data: response.data.data,
+          pagination: response.data.pagination,
+          count: response.data.data.length
+        };
+      }
+      // CASO 3: La respuesta ES directamente un array
+      else if (Array.isArray(response.data)) {
+        console.log(`📊 Reportes como array directo:`, response.data.length);
+        return {
+          success: true,
+          data: response.data,
+          count: response.data.length
+        };
+      }
     }
-  },
+    
+    console.warn("⚠️ No se encontró array de reportes:", response.data);
+    return { 
+      success: false, 
+      data: [], 
+      message: "No se encontraron reportes",
+      rawResponse: response.data
+    };
+    
+  } catch (error: any) {
+    console.error("❌ Error getting reports:", error);
+    return { 
+      success: false, 
+      data: [], 
+      message: error.message
+    };
+  }
+},
+
+generateReport: async (reportData: any) => {
+  try {
+    console.log("📤 Generando reporte:", reportData);
+    
+    const response = await axios.post("/reports/generate", reportData);
+    console.log("✅ Reporte generado:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ Error generating report:", {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    throw error;
+  }
+},
+
+getReportHistory: async (page = 1, limit = 50) => {
+  try {
+    const response = await axios.get("/reports/history", {
+      params: { page, limit }
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error("Error getting report history:", error.response?.data || error.message);
+    throw error;
+  }
+},
+
+getSystemStats: async () => {
+  try {
+    const response = await axios.get("/reports/stats");
+    return response.data;
+  } catch (error: any) {
+    console.error("Error getting system stats:", error.response?.data || error.message);
+    throw error;
+  }
+},
+
+downloadReport: async (reportId: string, format: string = 'json') => {
+  try {
+    console.log(`📥 Descargando reporte ${reportId} en formato ${format}`);
+    
+    const response = await axios.get(`/reports/export/${reportId}`, {
+      params: { format },
+      responseType: 'blob'
+    });
+    
+    // Crear nombre de archivo
+    const timestamp = new Date().toISOString().split('T')[0];
+    const filename = `reporte-${reportId.substring(0, 8)}-${timestamp}.${format}`;
+    
+    // Crear enlace de descarga
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+    
+    console.log('✅ Reporte descargado:', filename);
+    return true;
+  } catch (error: any) {
+    console.error("❌ Error downloading report:", error.response?.data || error.message);
+    throw error;
+  }
+},
+
+getReportById: async (reportId: string) => {
+  try {
+    const response = await axios.get(`/reports/${reportId}`);
+    return response.data;
+  } catch (error: any) {
+    console.error("Error getting report by ID:", error.response?.data || error.message);
+    throw error;
+  }
+},
+
+deleteReport: async (reportId: string) => {
+  try {
+    console.log('🗑️ Eliminando reporte:', reportId);
+    const response = await axios.delete(`/reports/${reportId}`);
+    console.log('✅ Reporte eliminado:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ Error deleting report:", error.response?.data || error.message);
+    throw error;
+  }
+},
+
+// ========== DEBUG: VER TODOS LOS REPORTES ==========
+debugGetAllReports: async () => {
+  try {
+    const response = await axios.get("/reports/debug/all");
+    console.log('🔍 Debug - Todos los reportes:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("Error debug reports:", error.response?.data || error.message);
+    
+    // Si el endpoint debug no existe, intentar con list
+    try {
+      console.log('🔄 Intentando endpoint /reports/list...');
+      const listResponse = await axios.get("/reports/list");
+      return {
+        success: true,
+        message: "Usando endpoint /reports/list",
+        data: listResponse.data
+      };
+    } catch (listError: any) {
+      throw new Error(`Debug no disponible: ${error.message}`);
+    }
+  }
+},
 
   // ========== RELACIONES ==========
   getCareerSubjects: async (careerId: string) => {

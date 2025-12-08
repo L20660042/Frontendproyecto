@@ -1,3 +1,4 @@
+// src/pages/dashboard/ReportsPage.tsx - COMPLETO Y CORREGIDO
 import { useState, useEffect } from 'react';
 import { DynamicSidebar } from '../../components/Sidebar';
 import { Alert, AlertDescription } from '../../components/alert';
@@ -143,7 +144,7 @@ interface Report {
   updatedAt?: string;
 }
 
-export default function SuperAdminDashboard() {
+export default function ReportsPage() {
   const [currentView, setCurrentView] = useState('dashboard');
   const [users, setUsers] = useState<User[]>([]);
   const [careers, setCareers] = useState<Career[]>([]);
@@ -198,23 +199,6 @@ export default function SuperAdminDashboard() {
       });
       
       console.log('📊 RESPUESTA CRUDA:', response.data);
-      console.log('📊 TIPO:', typeof response.data);
-      console.log('📊 ES ARRAY?:', Array.isArray(response.data));
-      
-      if (response.data && typeof response.data === 'object') {
-        console.log('📊 PROPIEDADES:', Object.keys(response.data));
-        
-        // Ver cada propiedad
-        Object.keys(response.data).forEach(key => {
-          const value = response.data[key];
-          console.log(`  ${key}:`, {
-            type: typeof value,
-            isArray: Array.isArray(value),
-            length: Array.isArray(value) ? value.length : 'N/A',
-            sample: Array.isArray(value) && value.length > 0 ? value[0] : 'N/A'
-          });
-        });
-      }
       
       return response.data;
       
@@ -293,8 +277,6 @@ export default function SuperAdminDashboard() {
         const subjectsResponse = await authService.getSubjects();
         let subjectsData: Subject[] = [];
         
-        console.log("📊 Subjects response:", subjectsResponse);
-        
         if (subjectsResponse.success && Array.isArray(subjectsResponse.data)) {
           subjectsData = subjectsResponse.data;
         } else if (Array.isArray(subjectsResponse)) {
@@ -329,8 +311,6 @@ export default function SuperAdminDashboard() {
         console.log("📥 Intentando cargar grupos...");
         const groupsResponse = await authService.getGroups();
         let groupsData: Group[] = [];
-        
-        console.log("📊 Groups response:", groupsResponse);
         
         if (groupsResponse.success && Array.isArray(groupsResponse.data)) {
           groupsData = groupsResponse.data;
@@ -379,8 +359,6 @@ export default function SuperAdminDashboard() {
         console.log("📥 Intentando cargar tutorías...");
         const tutoriasResponse = await authService.getTutorias();
         let tutoriasData: Tutoria[] = [];
-        
-        console.log("📊 Tutorias response:", tutoriasResponse);
         
         if (tutoriasResponse.success && Array.isArray(tutoriasResponse.data)) {
           tutoriasData = tutoriasResponse.data;
@@ -448,27 +426,19 @@ export default function SuperAdminDashboard() {
           // Caso 3: Buscar cualquier array en el objeto
           else if (reportsResponse && typeof reportsResponse === 'object') {
             // Buscar recursivamente arrays
-            const findArrays = (obj: any, path = ''): any[] => {
-              let arrays: any[] = [];
-              
-              if (Array.isArray(obj)) {
-                console.log(`🔍 Array encontrado en ${path}:`, obj.length);
-                arrays = arrays.concat(obj);
-              } else if (obj && typeof obj === 'object') {
-                for (const key in obj) {
-                  const currentPath = path ? `${path}.${key}` : key;
-                  arrays = arrays.concat(findArrays(obj[key], currentPath));
-                }
-              }
-              
-              return arrays;
-            };
-            
-            const foundArrays = findArrays(reportsResponse);
-            if (foundArrays.length > 0) {
-              reportsData = foundArrays;
-              console.log(`✅ Reportes encontrados recursivamente: ${reportsData.length}`);
-            }
+           const findArrays = (obj: any): any[] => {
+  let arrays: any[] = [];
+  
+  if (Array.isArray(obj)) {
+    arrays = arrays.concat(obj);
+  } else if (obj && typeof obj === 'object') {
+    for (const key in obj) {
+      arrays = arrays.concat(findArrays(obj[key]));
+    }
+  }
+  
+  return arrays;
+};
           }
         }
         
@@ -511,18 +481,6 @@ export default function SuperAdminDashboard() {
         
         setReports(sortedReports);
         console.log("✅ Reportes cargados:", sortedReports.length);
-        
-        // Mostrar detalles en consola
-        if (sortedReports.length > 0) {
-          console.log("📋 Primeros reportes:", sortedReports.slice(0, 3).map(r => ({
-            id: r._id?.substring(0, 8) + '...',
-            name: r.name,
-            type: r.type,
-            status: r.status
-          })));
-        } else {
-          console.log("ℹ️ No se encontraron reportes");
-        }
         
       } catch (err: any) {
         console.log("❌ Error cargando reportes:", err.message);
@@ -804,6 +762,7 @@ export default function SuperAdminDashboard() {
               </Alert>
             )}
 
+            {/* ESTA ES LA LÍNEA CORREGIDA - PASANDO REPORTS */}
             <StatsCards 
               users={users}
               careers={careers}
@@ -1191,7 +1150,7 @@ export default function SuperAdminDashboard() {
         </main>
       </div>
 
-      {/* Modales de USUARIOS */}
+      {/* Modales */}
       {showCreateUser && (
         <CreateUserModal 
           isOpen={showCreateUser} 
