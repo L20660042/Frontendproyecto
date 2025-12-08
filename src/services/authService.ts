@@ -554,83 +554,99 @@ export const authService = {
     }
   },
 
-  // ========== GRUPOS ==========
-  getGroups: async () => {
-    try {
-      const response = await axios.get("/groups");
-      console.log("✅ Groups response:", response.data);
-      
-      if (response.data.success && Array.isArray(response.data.data)) {
-        return response.data.data;
-      } else if (Array.isArray(response.data)) {
-        return response.data;
-      }
-      return [];
-    } catch (error: any) {
-      console.error("Error getting groups:", error.response?.data || error.message);
-      return [];
+// ========== GRUPOS ==========
+getGroups: async () => {
+  try {
+    const response = await axios.get("/groups");
+    console.log("✅ Groups response:", response.data);
+    
+    // Manejar diferentes estructuras de respuesta
+    if (response.data.success && Array.isArray(response.data.data)) {
+      return { success: true, data: response.data.data };
+    } else if (Array.isArray(response.data)) {
+      return { success: true, data: response.data };
+    } else if (response.data._id) {
+      // Si es un solo objeto
+      return { success: true, data: [response.data] };
     }
-  },
+    return { success: true, data: [] };
+  } catch (error: any) {
+    console.error("Error getting groups:", error.response?.data || error.message);
+    return { success: false, data: [], message: error.message };
+  }
+},
 
-  createGroup: async (groupData: any) => {
-    try {
-      console.log("📤 Creando grupo:", groupData);
-      
-      // Formatear datos para el backend
-      const formattedData = {
-        name: groupData.name,
-        code: groupData.code,
-        career: groupData.careerId,
-        subject: groupData.subjectId,
-        teacher: groupData.teacherId,
-        schedule: groupData.schedule || '',
-        capacity: parseInt(groupData.capacity) || 30,
-        status: groupData.status || 'active'
-      };
-      
-      const response = await axios.post("/groups", formattedData);
-      console.log("✅ Grupo creado:", response.data);
-      return response.data;
-    } catch (error: any) {
-      console.error("Error creating group:", error.response?.data || error.message);
-      throw error;
-    }
-  },
+createGroup: async (groupData: any) => {
+  try {
+    console.log("📤 Creando grupo:", groupData);
+    
+    // Formatear datos para el backend - CORREGIDO
+    const formattedData = {
+      name: groupData.name,
+      code: groupData.code,
+      career: groupData.careerId || undefined, // Mapear careerId -> career
+      subject: groupData.subjectId,
+      teacher: groupData.teacherId || undefined,
+      schedule: groupData.schedule || '',
+      capacity: parseInt(groupData.capacity) || 30,
+      active: groupData.status === 'active' // Mapear status -> active
+    };
+    
+    console.log("📤 Enviando al backend:", formattedData);
+    const response = await axios.post("/groups", formattedData);
+    console.log("✅ Grupo creado:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("Error creating group:", error.response?.data || error.message);
+    throw error;
+  }
+},
 
-  updateGroup: async (groupId: string, groupData: any) => {
-    try {
-      console.log("📤 Actualizando grupo:", groupId, groupData);
-      
-      // Formatear datos para el backend
-      const formattedData = {
-        name: groupData.name,
-        code: groupData.code,
-        career: groupData.careerId,
-        subject: groupData.subjectId,
-        teacher: groupData.teacherId,
-        schedule: groupData.schedule,
-        capacity: parseInt(groupData.capacity) || 30,
-        status: groupData.status
-      };
-      
-      const response = await axios.patch(`/groups/${groupId}`, formattedData);
-      console.log("✅ Grupo actualizado:", response.data);
-      return response.data;
-    } catch (error: any) {
-      console.error("❌ Error actualizando grupo:", error.response?.data || error.message);
-      throw error;
-    }
-  },
+updateGroup: async (groupId: string, groupData: any) => {
+  try {
+    console.log("📤 Actualizando grupo:", groupId, groupData);
+    
+    // Formatear datos para el backend - CORREGIDO
+    const formattedData = {
+      name: groupData.name,
+      code: groupData.code,
+      career: groupData.careerId || undefined, // Mapear careerId -> career
+      subject: groupData.subjectId,
+      teacher: groupData.teacherId || undefined,
+      schedule: groupData.schedule || '',
+      capacity: parseInt(groupData.capacity) || 30,
+      active: groupData.status === 'active' // Mapear status -> active
+    };
+    
+    console.log("📤 Enviando al backend:", formattedData);
+    const response = await axios.patch(`/groups/${groupId}`, formattedData);
+    console.log("✅ Grupo actualizado:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ Error actualizando grupo:", error.response?.data || error.message);
+    throw error;
+  }
+},
 
-  deleteGroup: async (groupId: string) => {
-    try {
-      const response = await axios.delete(`/groups/${groupId}`);
-      return response.data;
-    } catch (error: any) {
-      console.error("Error deleting group:", error.response?.data || error.message);
-      throw error;
-    }
-  },
+deleteGroup: async (groupId: string) => {
+  try {
+    const response = await axios.delete(`/groups/${groupId}`);
+    return response.data;
+  } catch (error: any) {
+    console.error("Error deleting group:", error.response?.data || error.message);
+    throw error;
+  }
+},
+
+toggleGroupStatus: async (groupId: string) => {
+  try {
+    const response = await axios.patch(`/groups/${groupId}/toggle`);
+    return response.data;
+  } catch (error: any) {
+    console.error("Error toggling group status:", error.response?.data || error.message);
+    throw error;
+  }
+},
 
   // ========== TUTORÍAS ==========
   getTutorias: async () => {

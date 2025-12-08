@@ -1,4 +1,3 @@
-// SuperAdminDashboard.tsx
 import { useState, useEffect } from 'react';
 import { DynamicSidebar } from '../../components/Sidebar';
 import { Alert, AlertDescription } from '../../components/alert';
@@ -52,6 +51,7 @@ interface Career {
   description?: string;
   duration?: number;
   createdAt?: string;
+  active?: boolean;
 }
 
 interface Subject {
@@ -64,21 +64,27 @@ interface Subject {
   credits?: number;
   semester?: number;
   createdAt?: string;
+  active?: boolean;
 }
 
 interface Group {
   _id: string;
   name: string;
   code: string;
-  careerId: string;
+  career?: string | { _id: string; name: string; code: string };
+  careerId?: string;
   careerName?: string;
-  subjectId: string;
+  subject?: string | { _id: string; name: string; code: string };
+  subjectId?: string;
   subjectName?: string;
+  teacher?: string | { _id: string; firstName: string; lastName: string };
   teacherId?: string;
   teacherName?: string;
   schedule?: string;
   capacity?: number;
   status: string;
+  active?: boolean;
+  students?: any[];
   createdAt?: string;
 }
 
@@ -131,14 +137,24 @@ export default function SuperAdminDashboard() {
       try {
         console.log("📥 Intentando cargar usuarios...");
         const usersResponse = await authService.getUsers();
+        let usersData: User[] = [];
+        
         if (Array.isArray(usersResponse)) {
-          setUsers(usersResponse);
+          usersData = usersResponse;
         } else if (usersResponse.data && Array.isArray(usersResponse.data)) {
-          setUsers(usersResponse.data);
+          usersData = usersResponse.data;
         } else if (usersResponse.success && Array.isArray(usersResponse.data)) {
-          setUsers(usersResponse.data);
+          usersData = usersResponse.data;
         }
-        console.log("👥 Usuarios cargados:", users.length);
+        
+        // Transformar datos de usuarios
+        const transformedUsers = usersData.map((user: any) => ({
+          ...user,
+          status: user.active ? 'active' : 'inactive'
+        }));
+        
+        setUsers(transformedUsers);
+        console.log("👥 Usuarios cargados:", transformedUsers.length);
       } catch (err: any) {
         console.log("ℹ️ Usuarios endpoint error:", err.message);
       }
@@ -147,18 +163,30 @@ export default function SuperAdminDashboard() {
       try {
         console.log("📥 Intentando cargar carreras...");
         const careersResponse = await authService.getCareers();
+        let careersData: Career[] = [];
+        
         if (careersResponse.success && Array.isArray(careersResponse.data)) {
-          setCareers(careersResponse.data);
+          careersData = careersResponse.data;
         } else if (Array.isArray(careersResponse)) {
-          setCareers(careersResponse);
+          careersData = careersResponse;
+        } else if (careersResponse.data && Array.isArray(careersResponse.data)) {
+          careersData = careersResponse.data;
         }
-        console.log("🎓 Carreras cargadas:", careers.length);
+        
+        // Transformar datos de carreras
+        const transformedCareers = careersData.map((career: any) => ({
+          ...career,
+          status: career.active ? 'active' : 'inactive'
+        }));
+        
+        setCareers(transformedCareers);
+        console.log("🎓 Carreras cargadas:", transformedCareers.length);
       } catch (err: any) {
         console.log("ℹ️ Carreras endpoint no disponible aún o error:", err.message);
         setInfoMessage('Algunos endpoints pueden no estar disponibles todavía');
       }
       
-      // Cargar materias - CORREGIDO
+      // Cargar materias
       try {
         console.log("📥 Intentando cargar materias...");
         const subjectsResponse = await authService.getSubjects();
@@ -174,47 +202,72 @@ export default function SuperAdminDashboard() {
           subjectsData = subjectsResponse.data;
         }
         
-        // Si el backend no devuelve careerName, enriquecer con datos de carreras
+        // Enriquecer con datos de carreras
         const enrichedSubjects = subjectsData.map((subject: any) => {
-          const career = careers.find(c => c._id === subject.careerId || c._id === subject.career?._id);
+          const careerId = subject.career?._id || subject.career || subject.careerId || '';
+          const career = careers.find(c => c._id === careerId);
+          
           return {
             ...subject,
-            careerId: subject.careerId || subject.career?._id || '',
-            careerName: subject.careerName || career?.name || 'Desconocida',
-            status: subject.status || (subject.active ? 'active' : 'inactive'),
+            careerId: careerId,
+            careerName: subject.career?.name || career?.name || 'Desconocida',
+            status: subject.active ? 'active' : 'inactive',
             credits: subject.credits || 4,
             semester: subject.semester || 1
           };
         });
         
         setSubjects(enrichedSubjects);
-        console.log("✅ Subjects loaded:", enrichedSubjects.length);
+        console.log("✅ Materias cargadas:", enrichedSubjects.length);
       } catch (err: any) {
         console.log("ℹ️ Materias endpoint no disponible aún o error:", err.message);
         // No mostrar error si el endpoint no está disponible
       }
       
-      // Cargar grupos - CORREGIDO (después de cargar subjects)
+      // Cargar grupos - CORREGIDO
       try {
         console.log("📥 Intentando cargar grupos...");
         const groupsResponse = await authService.getGroups();
         let groupsData: Group[] = [];
         
+        console.log("📊 Groups response:", groupsResponse);
+        
         if (groupsResponse.success && Array.isArray(groupsResponse.data)) {
           groupsData = groupsResponse.data;
         } else if (Array.isArray(groupsResponse)) {
           groupsData = groupsResponse;
+        } else if (groupsResponse.data && Array.isArray(groupsResponse.data)) {
+          groupsData = groupsResponse.data;
         }
         
         // Enriquecer con detalles usando los datos ya cargados
-        const groupsWithDetails = groupsData.map((group: any) => ({
-          ...group,
-          careerName: careers.find(c => c._id === group.careerId)?.name || 'Desconocida',
-          subjectName: subjects.find(s => s._id === group.subjectId)?.name || 'Desconocida',
-          teacherName: users.find(u => u._id === group.teacherId) ? 
-            `${users.find(u => u._id === group.teacherId)?.firstName} ${users.find(u => u._id === group.teacherId)?.lastName}` : 
-            'Sin asignar'
-        }));
+        const groupsWithDetails = groupsData.map((group: any) => {
+          const careerId = group.career?._id || group.career || '';
+          const subjectId = group.subject?._id || group.subject || '';
+          const teacherId = group.teacher?._id || group.teacher || '';
+          
+          const career = careers.find(c => c._id === careerId);
+          const subject = subjects.find(s => s._id === subjectId);
+          const teacher = users.find(u => u._id === teacherId);
+          
+          return {
+            ...group,
+            careerId: careerId,
+            careerName: group.career?.name || career?.name || 'Desconocida',
+            subjectId: subjectId,
+            subjectName: group.subject?.name || subject?.name || 'Desconocida',
+            teacherId: teacherId,
+            teacherName: group.teacher 
+              ? `${group.teacher?.firstName || ''} ${group.teacher?.lastName || ''}`.trim()
+              : teacher
+                ? `${teacher.firstName} ${teacher.lastName}`
+                : 'Sin asignar',
+            status: group.active ? 'active' : 'inactive',
+            capacity: group.capacity || 30,
+            schedule: group.schedule || ''
+          };
+        });
+        
         setGroups(groupsWithDetails);
         console.log("👥 Grupos cargados:", groupsWithDetails.length);
       } catch (err: any) {
@@ -280,7 +333,7 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  // Handlers para materias - CORREGIDOS
+  // Handlers para materias
   const handleDeleteSubject = async (subjectId: string) => {
     if (window.confirm('¿Estás seguro de eliminar esta materia? Esto también eliminará los grupos asociados.')) {
       try {
@@ -309,7 +362,7 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  // Handlers para grupos
+  // Handlers para grupos - CORREGIDOS
   const handleDeleteGroup = async (groupId: string) => {
     if (window.confirm('¿Estás seguro de eliminar este grupo?')) {
       try {
@@ -322,6 +375,19 @@ export default function SuperAdminDashboard() {
       } finally {
         setLoading(false);
       }
+    }
+  };
+
+  const handleToggleGroupStatus = async (groupId: string) => {
+    try {
+      setLoading(true);
+      await authService.toggleGroupStatus(groupId);
+      setSuccess('✅ Estado del grupo actualizado');
+      loadAllData();
+    } catch (err: any) {
+      setError('❌ Error al cambiar estado del grupo: ' + (err.message || 'Error desconocido'));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -441,6 +507,7 @@ export default function SuperAdminDashboard() {
               setShowEditGroup(true);
             }}
             onDeleteGroup={handleDeleteGroup}
+            onToggleGroupStatus={handleToggleGroupStatus}
           />
         );
 

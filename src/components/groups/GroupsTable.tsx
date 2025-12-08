@@ -1,9 +1,8 @@
-// components/groups/GroupsTable.tsx
 import { Card, CardContent } from '../../components/card';
 import { Button } from '../../components/button';
 import { Badge } from '../../components/badge';
 import { Input } from '../../components/input';
-import { Search, PlusCircle, EyeIcon, Edit, Trash2 } from 'lucide-react';
+import { Search, PlusCircle, EyeIcon, Edit, Trash2, Power } from 'lucide-react';
 
 interface GroupsTableProps {
   groups: any[];
@@ -14,6 +13,7 @@ interface GroupsTableProps {
   onViewDetails: (group: any) => void;
   onEditGroup: (group: any) => void;
   onDeleteGroup: (groupId: string) => void;
+  onToggleGroupStatus?: (groupId: string) => void; // Nueva prop opcional
 }
 
 export default function GroupsTable({
@@ -24,14 +24,15 @@ export default function GroupsTable({
   onCreateGroup,
   onViewDetails,
   onEditGroup,
-  onDeleteGroup
+  onDeleteGroup,
+  onToggleGroupStatus // Nueva prop
 }: GroupsTableProps) {
   const filteredGroups = groups.filter(group => {
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
     return (
-      group.name.toLowerCase().includes(searchLower) ||
-      group.code.toLowerCase().includes(searchLower) ||
+      group.name?.toLowerCase().includes(searchLower) ||
+      group.code?.toLowerCase().includes(searchLower) ||
       group.careerName?.toLowerCase().includes(searchLower) ||
       group.subjectName?.toLowerCase().includes(searchLower) ||
       group.teacherName?.toLowerCase().includes(searchLower)
@@ -139,6 +140,16 @@ export default function GroupsTable({
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
+                            {onToggleGroupStatus && (
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                title={group.status === 'active' ? 'Desactivar' : 'Activar'}
+                                onClick={() => onToggleGroupStatus(group._id)}
+                              >
+                                <Power className={`h-4 w-4 ${group.status === 'active' ? 'text-green-600' : 'text-gray-400'}`} />
+                              </Button>
+                            )}
                             <Button 
                               size="sm" 
                               variant="ghost" 
