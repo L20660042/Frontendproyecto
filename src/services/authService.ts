@@ -366,17 +366,26 @@ export const authService = {
     }
   },
 
-  // ========== MATERIAS (SUBJECTS) - ACTUALIZADO ==========
+  // ========== MATERIAS (SUBJECTS) - CORREGIDO ==========
   getSubjects: async () => {
     try {
       const response = await axios.get("/subjects");
-      console.log("✅ Subjects response:", response.data);
+      console.log("✅ Subjects response structure:", response.data);
       
-      if (response.data.success && Array.isArray(response.data.data)) {
-        return response.data.data;
+      // Manejar diferentes estructuras de respuesta
+      if (response.data.success && response.data.data) {
+        const subjectsResponse = response.data.data;
+        
+        if (subjectsResponse.success && Array.isArray(subjectsResponse.data)) {
+          return subjectsResponse.data;
+        } else if (Array.isArray(subjectsResponse)) {
+          return subjectsResponse;
+        }
       } else if (Array.isArray(response.data)) {
         return response.data;
       }
+      
+      console.warn("⚠️ Estructura de respuesta inesperada para subjects:", response.data);
       return [];
     } catch (error: any) {
       console.error("Error getting subjects:", error.response?.data || error.message);
@@ -392,28 +401,49 @@ export const authService = {
       const dataToSend = {
         name: subjectData.name,
         code: subjectData.code,
-        career: subjectData.careerId, // IMPORTANTE: mapear careerId a career
+        career: subjectData.careerId, // Enviar como string
         credits: subjectData.credits || 4,
         semester: subjectData.semester || 1,
-        // El backend manejará la conversión de status a active
-        status: subjectData.status || 'active'
+        // NO enviar status, el backend usa active
+        // El backend manejará la conversión internamente
       };
       
       console.log('📤 Enviando al backend:', dataToSend);
       const response = await axios.post("/subjects", dataToSend);
-      console.log("✅ Materia creada:", response.data);
+      console.log("✅ Respuesta del backend:", response.data);
+      
+      // Manejar estructura anidada como en careers
+      if (response.data.success && response.data.data) {
+        const subjectResponse = response.data.data;
+        
+        if (subjectResponse.success && subjectResponse.data) {
+          return {
+            success: true,
+            data: subjectResponse.data,
+            message: subjectResponse.message || 'Materia creada exitosamente'
+          };
+        } else if (subjectResponse._id) {
+          return {
+            success: true,
+            data: subjectResponse,
+            message: 'Materia creada exitosamente'
+          };
+        }
+      }
+      
       return response.data;
       
     } catch (error: any) {
       console.error("❌ Error creando materia:", {
         message: error.message,
         response: error.response?.data,
-        status: error.response?.status
+        status: error.response?.status,
+        dataSent: subjectData
       });
       
       let errorMessage = 'Error al crear materia';
       if (error.response?.status === 400) {
-        errorMessage = error.response.data.message || 'Datos inválidos';
+        errorMessage = error.response.data?.message || 'Datos inválidos';
       } else if (error.response?.status === 409) {
         errorMessage = 'El código de materia ya existe';
       } else if (error.response?.data?.message) {
@@ -432,15 +462,36 @@ export const authService = {
       const dataToSend = {
         name: subjectData.name,
         code: subjectData.code,
-        career: subjectData.careerId, // IMPORTANTE: mapear careerId a career
-        credits: subjectData.credits,
-        semester: subjectData.semester,
-        status: subjectData.status
+        career: subjectData.careerId, // IMPORTANTE: Enviar como string
+        credits: subjectData.credits || 4,
+        semester: subjectData.semester || 1,
+        // Convertir status a active para el backend
+        active: subjectData.status === 'active'
       };
       
       console.log('📤 Enviando al backend:', dataToSend);
       const response = await axios.patch(`/subjects/${subjectId}`, dataToSend);
-      console.log("✅ Materia actualizada:", response.data);
+      console.log("✅ Respuesta del backend:", response.data);
+      
+      // Manejar estructura anidada
+      if (response.data.success && response.data.data) {
+        const updateResponse = response.data.data;
+        
+        if (updateResponse.success && updateResponse.data) {
+          return {
+            success: true,
+            data: updateResponse.data,
+            message: updateResponse.message || 'Materia actualizada exitosamente'
+          };
+        } else if (updateResponse._id) {
+          return {
+            success: true,
+            data: updateResponse,
+            message: 'Materia actualizada exitosamente'
+          };
+        }
+      }
+      
       return response.data;
       
     } catch (error: any) {
@@ -454,7 +505,7 @@ export const authService = {
       if (error.response?.status === 404) {
         errorMessage = 'Materia no encontrada';
       } else if (error.response?.status === 400) {
-        errorMessage = error.response.data.message || 'Datos inválidos';
+        errorMessage = error.response.data?.message || 'Datos inválidos';
       } else if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       }

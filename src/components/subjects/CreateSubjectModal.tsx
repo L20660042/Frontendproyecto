@@ -74,11 +74,26 @@ export default function CreateSubjectModal({
       setLoading(true);
       onError('');
 
-      const result = await authService.createSubject(newSubject);
+      // Preparar datos para el backend
+      const subjectData = {
+        name: newSubject.name.trim(),
+        code: newSubject.code.trim().toUpperCase(),
+        careerId: newSubject.careerId,
+        credits: newSubject.credits,
+        semester: newSubject.semester,
+        status: newSubject.status
+      };
+
+      console.log('📤 Creando materia:', subjectData);
+
+      // ✅ LLAMADA CORREGIDA con manejo de estructura anidada
+      const result = await authService.createSubject(subjectData);
       
+      // Manejar diferentes formatos de respuesta
       if (result.success || result._id || result.id || result.data?._id) {
-        onCreate();
-        onClose();
+        console.log('✅ Materia creada exitosamente:', result);
+        
+        // Resetear formulario
         setNewSubject({
           name: '',
           code: '',
@@ -88,8 +103,13 @@ export default function CreateSubjectModal({
           status: 'active'
         });
         setErrors({});
+        
+        onCreate(); // Notificar al componente padre
+        onClose(); // Cerrar modal
       } else {
+        // Extraer mensaje de error
         const errorMsg = result.message || result.error || 'Error desconocido al crear materia';
+        console.error('❌ Error del servidor:', errorMsg);
         onError(`Error: ${errorMsg}`);
       }
       
@@ -98,8 +118,15 @@ export default function CreateSubjectModal({
       
       let errorMessage = 'Error al crear materia';
       
+      // Manejar errores de red
       if (err.message?.includes('Network Error')) {
         errorMessage = 'Error de conexión. Verifica tu internet o si el servidor está activo.';
+      }
+      // Manejar errores de respuesta HTTP
+      else if (err.response?.status === 400) {
+        errorMessage = 'Datos inválidos. Verifica la información ingresada.';
+      } else if (err.response?.status === 409) {
+        errorMessage = 'El código de materia ya existe. Usa un código diferente.';
       } else if (err.response?.data) {
         const errorData = err.response.data;
         
@@ -121,11 +148,16 @@ export default function CreateSubjectModal({
   };
 
   return (
-    <BaseModal title="Crear Nueva Materia" isOpen={isOpen} onClose={onClose} size="lg">
+    <BaseModal 
+      title="Crear Nueva Materia" 
+      isOpen={isOpen} 
+      onClose={onClose}
+      size="lg"
+    >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="subjectName" className="text-sm font-medium flex items-center gap-2">
-            Nombre *
+            Nombre de la Materia *
             {errors.name && (
               <span className="text-xs text-red-500 flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
@@ -143,13 +175,13 @@ export default function CreateSubjectModal({
             required
             placeholder="Cálculo Diferencial"
             disabled={loading}
-            className={errors.name ? 'border-red-500 focus:ring-red-500' : ''}
+            className={`w-full ${errors.name ? 'border-red-500 focus:ring-red-500' : ''}`}
           />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="subjectCode" className="text-sm font-medium flex items-center gap-2">
-            Código *
+            Código Único *
             {errors.code && (
               <span className="text-xs text-red-500 flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
@@ -167,8 +199,11 @@ export default function CreateSubjectModal({
             required
             placeholder="CAL-101"
             disabled={loading}
-            className={`font-mono ${errors.code ? 'border-red-500 focus:ring-red-500' : ''}`}
+            className={`w-full font-mono ${errors.code ? 'border-red-500 focus:ring-red-500' : ''}`}
           />
+          <p className="text-xs text-muted-foreground">
+            Código identificador único (se convertirá a mayúsculas)
+          </p>
         </div>
 
         <div className="space-y-2">
@@ -199,6 +234,9 @@ export default function CreateSubjectModal({
               </option>
             ))}
           </select>
+          <p className="text-xs text-muted-foreground">
+            La materia pertenecerá a esta carrera
+          </p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -212,22 +250,31 @@ export default function CreateSubjectModal({
                 </span>
               )}
             </Label>
-            <Input
-              id="subjectCredits"
-              type="number"
-              min="1"
-              max="20"
-              value={newSubject.credits}
-              onChange={(e) => {
-                const value = parseInt(e.target.value);
-                if (value >= 1 && value <= 20) {
-                  setNewSubject({...newSubject, credits: value});
-                  if (errors.credits) setErrors({...errors, credits: ''});
-                }
-              }}
-              disabled={loading}
-              className={errors.credits ? 'border-red-500 focus:ring-red-500' : ''}
-            />
+            <div className="flex items-center gap-2">
+              <Input
+                id="subjectCredits"
+                type="number"
+                min="1"
+                max="20"
+                step="1"
+                value={newSubject.credits}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value);
+                  if (value >= 1 && value <= 20) {
+                    setNewSubject({...newSubject, credits: value});
+                    if (errors.credits) setErrors({...errors, credits: ''});
+                  }
+                }}
+                disabled={loading}
+                className={`w-full ${errors.credits ? 'border-red-500 focus:ring-red-500' : ''}`}
+              />
+              <span className="text-sm text-muted-foreground whitespace-nowrap">
+                créditos
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Generalmente 3-5 créditos
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -240,22 +287,31 @@ export default function CreateSubjectModal({
                 </span>
               )}
             </Label>
-            <Input
-              id="subjectSemester"
-              type="number"
-              min="1"
-              max="12"
-              value={newSubject.semester}
-              onChange={(e) => {
-                const value = parseInt(e.target.value);
-                if (value >= 1 && value <= 12) {
-                  setNewSubject({...newSubject, semester: value});
-                  if (errors.semester) setErrors({...errors, semester: ''});
-                }
-              }}
-              disabled={loading}
-              className={errors.semester ? 'border-red-500 focus:ring-red-500' : ''}
-            />
+            <div className="flex items-center gap-2">
+              <Input
+                id="subjectSemester"
+                type="number"
+                min="1"
+                max="12"
+                step="1"
+                value={newSubject.semester}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value);
+                  if (value >= 1 && value <= 12) {
+                    setNewSubject({...newSubject, semester: value});
+                    if (errors.semester) setErrors({...errors, semester: ''});
+                  }
+                }}
+                disabled={loading}
+                className={`w-full ${errors.semester ? 'border-red-500 focus:ring-red-500' : ''}`}
+              />
+              <span className="text-sm text-muted-foreground whitespace-nowrap">
+                semestre
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              En qué semestre se imparte
+            </p>
           </div>
         </div>
 
@@ -270,27 +326,42 @@ export default function CreateSubjectModal({
             onChange={(e) => setNewSubject({...newSubject, status: e.target.value})}
             disabled={loading}
           >
-            <option value="active">🟢 Activa</option>
-            <option value="inactive">🔴 Inactiva</option>
+            <option value="active">🟢 Activa - Disponible para grupos</option>
+            <option value="inactive">🔴 Inactiva - No disponible temporalmente</option>
           </select>
+          <p className="text-xs text-muted-foreground">
+            Puedes cambiar el estado después de crear la materia
+          </p>
         </div>
 
-        <div className="flex justify-end gap-3 pt-6">
+        <div className="flex justify-end gap-3 pt-6 border-t">
           <Button 
             type="button" 
             variant="outline" 
             onClick={onClose}
             disabled={loading}
+            className="px-6"
           >
             Cancelar
           </Button>
-          <Button type="submit" disabled={loading}>
+          <Button 
+            type="submit" 
+            disabled={loading}
+            className="px-6 bg-green-600 hover:bg-green-700"
+          >
             {loading ? (
               <>
                 <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                 Creando...
               </>
-            ) : 'Crear Materia'}
+            ) : (
+              <>
+                <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                </svg>
+                Crear Materia
+              </>
+            )}
           </Button>
         </div>
       </form>
