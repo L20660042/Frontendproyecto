@@ -3,7 +3,7 @@ import { DynamicSidebar } from '../../components/Sidebar';
 import { Alert, AlertDescription } from '../../components/alert';
 import { Button } from '../../components/button';
 import { Badge } from '../../components/badge';
-import { Shield, RefreshCw, X, Check, FileText, BarChart3, Users, AlertCircle, Database } from 'lucide-react';
+import { Shield, RefreshCw, X, Check, FileText, BarChart3, Users, AlertCircle, Database, Award } from 'lucide-react';
 import { authService } from '../../services/authService';
 import axios from 'axios';
 
@@ -17,6 +17,12 @@ import GroupsTable from '../../components/groups/GroupsTable';
 import TutoriasTable from '../../components/tutorias/TutoriasTable';
 import ReportsTable from '../../components/reports/ReportsTable';
 import SystemStatsModal from '../../components/reports/SystemStatsModal';
+
+// Importar componentes de capacitaciones
+import CapacitacionesTable from '../../components/capacitacion/CapacitacionesTable';
+import CreateCapacitacionModal from '../../components/capacitacion/CreateCapacitacionModal';
+import CapacitacionDetailsModal from '../../components/capacitacion/CapacitacionDetailsModal';
+import EditCapacitacionModal from '../../components/capacitacion/EditCapacitacionModal';
 
 // Importar modales
 import CreateUserModal from '../../components/users/CreateUserModal';
@@ -118,6 +124,19 @@ interface Tutoria {
   createdAt?: string;
 }
 
+interface Capacitacion {
+  _id: string;
+  title: string;
+  teacher: string | { _id: string; firstName: string; lastName: string };
+  teacherId?: string;
+  teacherName?: string;
+  date: string;
+  description?: string;
+  evidence?: string[];
+  observations?: string;
+  createdAt?: string;
+}
+
 interface Report {
   _id: string;
   name: string;
@@ -143,6 +162,14 @@ interface Report {
   updatedAt?: string;
 }
 
+interface AlertItem {
+  _id: string;
+  message: string;
+  riskLevel: number;
+  resolved: boolean;
+  createdAt: string;
+}
+
 export default function SuperAdminDashboard() {
   const [currentView, setCurrentView] = useState('dashboard');
   const [users, setUsers] = useState<User[]>([]);
@@ -150,7 +177,9 @@ export default function SuperAdminDashboard() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [tutorias, setTutorias] = useState<Tutoria[]>([]);
+  const [capacitaciones, setCapacitaciones] = useState<Capacitacion[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
+  const [alerts, setAlerts] = useState<AlertItem[]>([]);
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -164,6 +193,7 @@ export default function SuperAdminDashboard() {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [selectedTutoria, setSelectedTutoria] = useState<Tutoria | null>(null);
+  const [selectedCapacitacion, setSelectedCapacitacion] = useState<Capacitacion | null>(null);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   
   // Estados para modales
@@ -172,6 +202,7 @@ export default function SuperAdminDashboard() {
   const [showCreateSubject, setShowCreateSubject] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showCreateTutoria, setShowCreateTutoria] = useState(false);
+  const [showCreateCapacitacion, setShowCreateCapacitacion] = useState(false);
   const [showGenerateReport, setShowGenerateReport] = useState(false);
   
   const [showUserDetails, setShowUserDetails] = useState(false);
@@ -179,6 +210,7 @@ export default function SuperAdminDashboard() {
   const [showSubjectDetails, setShowSubjectDetails] = useState(false);
   const [showGroupDetails, setShowGroupDetails] = useState(false);
   const [showTutoriaDetails, setShowTutoriaDetails] = useState(false);
+  const [showCapacitacionDetails, setShowCapacitacionDetails] = useState(false);
   const [showReportDetails, setShowReportDetails] = useState(false);
   const [showSystemStats, setShowSystemStats] = useState(false);
   
@@ -187,14 +219,17 @@ export default function SuperAdminDashboard() {
   const [showEditSubject, setShowEditSubject] = useState(false);
   const [showEditGroup, setShowEditGroup] = useState(false);
   const [showEditTutoria, setShowEditTutoria] = useState(false);
+  const [showEditCapacitacion, setShowEditCapacitacion] = useState(false);
 
-  // Función para debuguear endpoint de reportes
-  const debugReportsEndpoint = async () => {
+  // Función para debuguear endpoint de capacitaciones
+  const debugCapacitacionesEndpoint = async () => {
     try {
-      console.log('🔍 DEBUG: Probando endpoint /reports/list directamente...');
+      console.log('🔍 DEBUG: Probando endpoint /capacitacion directamente...');
       
-      const response = await axios.get("/reports/list", {
-        params: { page: 1, limit: 100 }
+      const response = await axios.get("/capacitacion", {
+        headers: {
+          'Authorization': `Bearer ${authService.getToken()}`
+        }
       });
       
       console.log('📊 RESPUESTA CRUDA:', response.data);
@@ -203,17 +238,6 @@ export default function SuperAdminDashboard() {
       
       if (response.data && typeof response.data === 'object') {
         console.log('📊 PROPIEDADES:', Object.keys(response.data));
-        
-        // Ver cada propiedad
-        Object.keys(response.data).forEach(key => {
-          const value = response.data[key];
-          console.log(`  ${key}:`, {
-            type: typeof value,
-            isArray: Array.isArray(value),
-            length: Array.isArray(value) ? value.length : 'N/A',
-            sample: Array.isArray(value) && value.length > 0 ? value[0] : 'N/A'
-          });
-        });
       }
       
       return response.data;
@@ -221,6 +245,84 @@ export default function SuperAdminDashboard() {
     } catch (err: any) {
       console.error('❌ DEBUG Error:', err);
       return null;
+    }
+  };
+
+  // Función para cargar capacitaciones
+  const loadCapacitaciones = async () => {
+    try {
+      console.log("📥 Intentando cargar capacitaciones...");
+      const response = await authService.getCapacitaciones();
+      let capacitacionesData: Capacitacion[] = [];
+      
+      console.log("📊 Capacitaciones response:", response);
+      
+      // Manejar diferentes estructuras de respuesta
+      if (response.success && Array.isArray(response.data)) {
+        capacitacionesData = response.data;
+      } else if (Array.isArray(response)) {
+        capacitacionesData = response;
+      } else if (response.data && Array.isArray(response.data)) {
+        capacitacionesData = response.data;
+      } else if (Array.isArray(response.data?.data)) {
+        capacitacionesData = response.data.data;
+      }
+      
+      // Enriquecer con datos de docentes
+      const enrichedCapacitaciones = capacitacionesData.map((capacitacion: any) => {
+        const teacherId = capacitacion.teacher?._id || capacitacion.teacher || '';
+        const teacher = users.find(u => u._id === teacherId);
+        
+        return {
+          ...capacitacion,
+          teacherId,
+          teacherName: teacher 
+            ? `${teacher.firstName} ${teacher.lastName}`
+            : capacitacion.teacher?.firstName
+              ? `${capacitacion.teacher.firstName} ${capacitacion.teacher.lastName}`
+              : 'Desconocido',
+          date: capacitacion.date || capacitacion.createdAt
+        };
+      });
+      
+      // Ordenar por fecha más reciente
+      const sortedCapacitaciones = enrichedCapacitaciones.sort((a: any, b: any) => 
+        new Date(b.date || b.createdAt).getTime() - new Date(a.date || a.createdAt).getTime()
+      );
+      
+      setCapacitaciones(sortedCapacitaciones);
+      console.log("📚 Capacitaciones cargadas:", sortedCapacitaciones.length);
+      
+    } catch (err: any) {
+      console.log("ℹ️ Capacitaciones endpoint no disponible aún o error:", err.message);
+    }
+  };
+
+  // Función para cargar alertas
+  const loadAlerts = async () => {
+    try {
+      console.log("📥 Intentando cargar alertas...");
+      const response = await authService.getAlerts();
+      let alertsData: AlertItem[] = [];
+      
+      console.log("📊 Alerts response:", response);
+      
+      if (response.success && Array.isArray(response.data)) {
+        alertsData = response.data;
+      } else if (Array.isArray(response)) {
+        alertsData = response;
+      }
+      
+      // Ordenar por fecha más reciente
+      const sortedAlerts = alertsData.sort((a: any, b: any) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      
+      setAlerts(sortedAlerts);
+      console.log("🚨 Alertas cargadas:", sortedAlerts.length);
+      
+    } catch (err: any) {
+      console.log("ℹ️ Alerts endpoint no disponible aún o error:", err.message);
     }
   };
 
@@ -284,7 +386,6 @@ export default function SuperAdminDashboard() {
         console.log("🎓 Carreras cargadas:", transformedCareers.length);
       } catch (err: any) {
         console.log("ℹ️ Carreras endpoint no disponible aún o error:", err.message);
-        setInfoMessage('Algunos endpoints pueden no estar disponibles todavía');
       }
       
       // Cargar materias
@@ -292,8 +393,6 @@ export default function SuperAdminDashboard() {
         console.log("📥 Intentando cargar materias...");
         const subjectsResponse = await authService.getSubjects();
         let subjectsData: Subject[] = [];
-        
-        console.log("📊 Subjects response:", subjectsResponse);
         
         if (subjectsResponse.success && Array.isArray(subjectsResponse.data)) {
           subjectsData = subjectsResponse.data;
@@ -329,8 +428,6 @@ export default function SuperAdminDashboard() {
         console.log("📥 Intentando cargar grupos...");
         const groupsResponse = await authService.getGroups();
         let groupsData: Group[] = [];
-        
-        console.log("📊 Groups response:", groupsResponse);
         
         if (groupsResponse.success && Array.isArray(groupsResponse.data)) {
           groupsData = groupsResponse.data;
@@ -380,8 +477,6 @@ export default function SuperAdminDashboard() {
         const tutoriasResponse = await authService.getTutorias();
         let tutoriasData: Tutoria[] = [];
         
-        console.log("📊 Tutorias response:", tutoriasResponse);
-        
         if (tutoriasResponse.success && Array.isArray(tutoriasResponse.data)) {
           tutoriasData = tutoriasResponse.data;
         } else if (Array.isArray(tutoriasResponse)) {
@@ -425,6 +520,12 @@ export default function SuperAdminDashboard() {
         console.log("ℹ️ Tutorías endpoint no disponible aún o error:", err.message);
       }
 
+      // Cargar capacitaciones (debe ir después de cargar usuarios)
+      await loadCapacitaciones();
+
+      // Cargar alertas
+      await loadAlerts();
+
       // Cargar reportes
       try {
         console.log("📥 Intentando cargar reportes...");
@@ -444,45 +545,6 @@ export default function SuperAdminDashboard() {
           else if (Array.isArray(reportsResponse)) {
             reportsData = reportsResponse;
             console.log(`✅ Reportes como array directo: ${reportsResponse.length}`);
-          }
-          // Caso 3: Buscar cualquier array en el objeto
-          else if (reportsResponse && typeof reportsResponse === 'object') {
-            // Buscar recursivamente arrays
-            const findArrays = (obj: any, path = ''): any[] => {
-              let arrays: any[] = [];
-              
-              if (Array.isArray(obj)) {
-                console.log(`🔍 Array encontrado en ${path}:`, obj.length);
-                arrays = arrays.concat(obj);
-              } else if (obj && typeof obj === 'object') {
-                for (const key in obj) {
-                  const currentPath = path ? `${path}.${key}` : key;
-                  arrays = arrays.concat(findArrays(obj[key], currentPath));
-                }
-              }
-              
-              return arrays;
-            };
-            
-            const foundArrays = findArrays(reportsResponse);
-            if (foundArrays.length > 0) {
-              reportsData = foundArrays;
-              console.log(`✅ Reportes encontrados recursivamente: ${reportsData.length}`);
-            }
-          }
-        }
-        
-        // Si todavía no hay datos, probar endpoint directo
-        if (reportsData.length === 0) {
-          console.log("🔄 Probando endpoint directo...");
-          try {
-            const directResponse = await debugReportsEndpoint();
-            if (directResponse && directResponse.success && Array.isArray(directResponse.data)) {
-              reportsData = directResponse.data;
-              console.log(`✅ Reportes obtenidos de endpoint directo: ${reportsData.length}`);
-            }
-          } catch (directErr) {
-            console.log("⚠️ Endpoint directo no disponible");
           }
         }
         
@@ -511,18 +573,6 @@ export default function SuperAdminDashboard() {
         
         setReports(sortedReports);
         console.log("✅ Reportes cargados:", sortedReports.length);
-        
-        // Mostrar detalles en consola
-        if (sortedReports.length > 0) {
-          console.log("📋 Primeros reportes:", sortedReports.slice(0, 3).map(r => ({
-            id: r._id?.substring(0, 8) + '...',
-            name: r.name,
-            type: r.type,
-            status: r.status
-          })));
-        } else {
-          console.log("ℹ️ No se encontraron reportes");
-        }
         
       } catch (err: any) {
         console.log("❌ Error cargando reportes:", err.message);
@@ -662,6 +712,83 @@ export default function SuperAdminDashboard() {
     }
   };
 
+  // Handlers para capacitaciones
+  const handleCreateCapacitacion = async (capacitacionData: any) => {
+    try {
+      setLoading(true);
+      setError('');
+      setSuccess('');
+      
+      console.log('📤 Creando capacitación:', capacitacionData);
+      const result = await authService.createCapacitacion(capacitacionData);
+      
+      console.log('✅ Resultado:', result);
+      
+      if (result.success || result._id) {
+        // Recargar datos para obtener la nueva capacitación
+        await loadCapacitaciones();
+        
+        setSuccess('✅ Capacitación creada exitosamente');
+        setShowCreateCapacitacion(false);
+        
+      } else {
+        throw new Error(result.message || '❌ Error al crear capacitación');
+      }
+      
+    } catch (err: any) {
+      console.error('❌ Error creating capacitacion:', err);
+      setError(err.message || '❌ Error al crear capacitación');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateCapacitacion = async (capacitacionId: string, capacitacionData: any) => {
+    try {
+      setLoading(true);
+      setError('');
+      setSuccess('');
+      
+      console.log('📤 Actualizando capacitación:', capacitacionId, capacitacionData);
+      const result = await authService.updateCapacitacion(capacitacionId, capacitacionData);
+      
+      console.log('✅ Resultado:', result);
+      
+      if (result.success || result._id) {
+        // Recargar datos
+        await loadCapacitaciones();
+        
+        setSuccess('✅ Capacitación actualizada exitosamente');
+        setShowEditCapacitacion(false);
+        setSelectedCapacitacion(null);
+        
+      } else {
+        throw new Error(result.message || '❌ Error al actualizar capacitación');
+      }
+      
+    } catch (err: any) {
+      console.error('❌ Error updating capacitacion:', err);
+      setError(err.message || '❌ Error al actualizar capacitación');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteCapacitacion = async (capacitacionId: string) => {
+    if (window.confirm('¿Estás seguro de eliminar esta capacitación?')) {
+      try {
+        setLoading(true);
+        await authService.deleteCapacitacion(capacitacionId);
+        setSuccess('✅ Capacitación eliminada correctamente');
+        loadAllData();
+      } catch (err: any) {
+        setError('❌ Error al eliminar capacitación: ' + (err.message || 'Error desconocido'));
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   // Handlers para reportes
   const handleGenerateReport = async (reportData: any) => {
     try {
@@ -795,7 +922,7 @@ export default function SuperAdminDashboard() {
                   <Button 
                     size="sm" 
                     variant="outline" 
-                    onClick={debugReportsEndpoint}
+                    onClick={debugCapacitacionesEndpoint}
                     className="ml-2"
                   >
                     Debug
@@ -811,6 +938,8 @@ export default function SuperAdminDashboard() {
               groups={groups}
               tutorias={tutorias}
               reports={reports}
+              capacitaciones={capacitaciones}
+              alerts={alerts}
             />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -825,6 +954,16 @@ export default function SuperAdminDashboard() {
                   >
                     <Users className="h-4 w-4 mr-2" />
                     Crear Nuevo Usuario
+                  </Button>
+                  
+                  <Button 
+                    className="w-full justify-start" 
+                    variant="outline"
+                    onClick={() => setShowCreateCapacitacion(true)}
+                    disabled={loading}
+                  >
+                    <Award className="h-4 w-4 mr-2" />
+                    Nueva Capacitación
                   </Button>
                   
                   <Button 
@@ -861,6 +1000,48 @@ export default function SuperAdminDashboard() {
               
               <RecentUsers users={users} />
             </div>
+            
+            {/* Card de capacitaciones recientes */}
+            {capacitaciones.length > 0 && (
+              <div className="bg-card border rounded-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Award className="h-5 w-5" />
+                    Capacitaciones Recientes
+                  </h3>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setCurrentView('capacitaciones')}
+                  >
+                    Ver todas →
+                  </Button>
+                </div>
+                
+                <div className="space-y-3">
+                  {capacitaciones.slice(0, 3).map(capacitacion => (
+                    <div 
+                      key={capacitacion._id} 
+                      className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-md cursor-pointer"
+                      onClick={() => {
+                        setSelectedCapacitacion(capacitacion);
+                        setShowCapacitacionDetails(true);
+                      }}
+                    >
+                      <div>
+                        <div className="font-medium">{capacitacion.title}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {capacitacion.teacherName} • {new Date(capacitacion.date).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <Badge variant="outline">
+                        {capacitacion.evidence?.length || 0} evidencias
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             
             {/* Card de reportes */}
             <div className="bg-card border rounded-lg p-6">
@@ -1058,6 +1239,26 @@ export default function SuperAdminDashboard() {
           />
         );
 
+      case 'capacitaciones':
+        return (
+          <CapacitacionesTable
+            capacitaciones={capacitaciones}
+            loading={loading}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            onCreateCapacitacion={() => setShowCreateCapacitacion(true)}
+            onViewDetails={(capacitacion) => {
+              setSelectedCapacitacion(capacitacion);
+              setShowCapacitacionDetails(true);
+            }}
+            onEditCapacitacion={(capacitacion) => {
+              setSelectedCapacitacion(capacitacion);
+              setShowEditCapacitacion(true);
+            }}
+            onDeleteCapacitacion={handleDeleteCapacitacion}
+          />
+        );
+
       case 'reports':
         return (
           <ReportsTable
@@ -1088,6 +1289,7 @@ export default function SuperAdminDashboard() {
       <DynamicSidebar 
         onNavigate={setCurrentView} 
         currentView={currentView} 
+        alertsCount={alerts.filter(a => !a.resolved).length}
       />
       
       <div className="flex-1 overflow-auto ml-64">
@@ -1096,6 +1298,12 @@ export default function SuperAdminDashboard() {
             <div>
               <h1 className="text-2xl font-bold text-foreground">Super Administración</h1>
               <p className="text-muted-foreground">Sistema Metricampus - Panel de Control</p>
+              {currentView === 'capacitaciones' && (
+                <div className="mt-2 flex items-center gap-2 text-sm text-amber-600">
+                  <Award className="h-4 w-4" />
+                  <span>Gestión de Capacitaciones</span>
+                </div>
+              )}
               {currentView === 'reports' && (
                 <div className="mt-2 flex items-center gap-2 text-sm text-blue-600">
                   <FileText className="h-4 w-4" />
@@ -1117,6 +1325,16 @@ export default function SuperAdminDashboard() {
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Actualizar
               </Button>
+              {currentView === 'capacitaciones' && (
+                <Button 
+                  variant="default" 
+                  size="sm"
+                  onClick={() => setShowCreateCapacitacion(true)}
+                >
+                  <Award className="h-4 w-4 mr-2" />
+                  Nueva Capacitación
+                </Button>
+              )}
               {currentView === 'reports' && (
                 <Button 
                   variant="default" 
@@ -1159,23 +1377,23 @@ export default function SuperAdminDashboard() {
               <Button 
                 size="sm" 
                 variant="outline"
-                onClick={debugReportsEndpoint}
+                onClick={debugCapacitacionesEndpoint}
                 disabled={loading}
               >
-                Debug Reportes
+                Debug Capacitaciones
               </Button>
               
               <Button 
                 size="sm" 
                 variant="outline"
                 onClick={() => {
-                  console.log('📊 Estado actual de reportes:', {
-                    count: reports.length,
-                    reports: reports.map(r => ({
-                      id: r._id?.substring(0, 8) + '...',
-                      name: r.name,
-                      type: r.type,
-                      status: r.status
+                  console.log('📊 Estado actual de capacitaciones:', {
+                    count: capacitaciones.length,
+                    capacitaciones: capacitaciones.map(c => ({
+                      id: c._id?.substring(0, 8) + '...',
+                      title: c.title,
+                      teacher: c.teacherName,
+                      date: c.date
                     }))
                   });
                 }}
@@ -1438,6 +1656,46 @@ export default function SuperAdminDashboard() {
         />
       )}
 
+      {/* Modales de CAPACITACIONES */}
+      {showCreateCapacitacion && (
+        <CreateCapacitacionModal 
+          teachers={users.filter(u => u.role === 'docente' || u.role === 'teacher')} 
+          isOpen={showCreateCapacitacion} 
+          onClose={() => setShowCreateCapacitacion(false)} 
+          onCreate={handleCreateCapacitacion}
+          onError={setError} 
+        />
+      )}
+      
+      {showCapacitacionDetails && selectedCapacitacion && (
+        <CapacitacionDetailsModal 
+          capacitacion={selectedCapacitacion} 
+          isOpen={showCapacitacionDetails} 
+          onClose={() => {
+            setShowCapacitacionDetails(false);
+            setSelectedCapacitacion(null);
+          }} 
+          onEdit={() => {
+            setShowCapacitacionDetails(false);
+            setShowEditCapacitacion(true);
+          }}
+        />
+      )}
+      
+      {showEditCapacitacion && selectedCapacitacion && (
+        <EditCapacitacionModal 
+          capacitacion={selectedCapacitacion}
+          teachers={users.filter(u => u.role === 'docente' || u.role === 'teacher')}
+          isOpen={showEditCapacitacion} 
+          onClose={() => {
+            setShowEditCapacitacion(false);
+            setSelectedCapacitacion(null);
+          }} 
+          onUpdate={(updatedData) => handleUpdateCapacitacion(selectedCapacitacion._id, updatedData)} 
+          onError={setError} 
+        />
+      )}
+
       {/* Modales de REPORTES */}
       {showGenerateReport && (
         <GenerateReportModal
@@ -1465,6 +1723,7 @@ export default function SuperAdminDashboard() {
         />
       )}
 
+      {/* Modal de estadísticas del sistema */}
       <SystemStatsModal
         isOpen={showSystemStats}
         onClose={() => setShowSystemStats(false)}

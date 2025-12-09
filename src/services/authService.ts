@@ -1,4 +1,3 @@
-// authService.ts
 import axios from "axios";
 
 const API_URL = "https://mi-backendnew-production.up.railway.app";
@@ -727,26 +726,83 @@ deleteTutoria: async (tutoriaId: string) => {
 },
 
   // ========== CAPACITACIONES ==========
-  getCapacitaciones: async () => {
-    try {
-      const response = await axios.get("/capacitacion");
-      return response.data;
-    } catch (error: any) {
-      console.error("Error getting capacitaciones:", error.response?.data || error.message);
-      return { success: false, data: [] };
+getCapacitaciones: async () => {
+  try {
+    const response = await axios.get("/capacitacion");
+    console.log("✅ Capacitaciones response:", response.data);
+    
+    // Manejar diferentes estructuras de respuesta
+    if (response.data.success && Array.isArray(response.data.data)) {
+      return { success: true, data: response.data.data };
+    } else if (Array.isArray(response.data)) {
+      return { success: true, data: response.data };
+    } else if (response.data._id) {
+      return { success: true, data: [response.data] };
     }
-  },
+    return { success: true, data: [] };
+  } catch (error: any) {
+    console.error("Error getting capacitaciones:", error.response?.data || error.message);
+    return { success: false, data: [], message: error.message };
+  }
+},
 
-  createCapacitacion: async (capacitacionData: any) => {
-    try {
-      const response = await axios.post("/capacitacion", capacitacionData);
-      return response.data;
-    } catch (error: any) {
-      console.error("Error creating capacitacion:", error.response?.data || error.message);
-      throw error;
-    }
-  },
+createCapacitacion: async (capacitacionData: any) => {
+  try {
+    console.log("📤 Creando capacitación:", capacitacionData);
+    
+    // Formatear datos para el backend
+    const formattedData = {
+      title: capacitacionData.title,
+      teacher: capacitacionData.teacher,
+      date: capacitacionData.date,
+      description: capacitacionData.description || '',
+      evidence: capacitacionData.evidence || [],
+      observations: capacitacionData.observations || ''
+    };
+    
+    console.log("📤 Enviando al backend:", formattedData);
+    const response = await axios.post("/capacitacion", formattedData);
+    console.log("✅ Capacitación creada:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("Error creating capacitacion:", error.response?.data || error.message);
+    throw error;
+  }
+},
 
+updateCapacitacion: async (capacitacionId: string, capacitacionData: any) => {
+  try {
+    console.log("📤 Actualizando capacitación:", capacitacionId, capacitacionData);
+    
+    // Formatear datos para el backend
+    const formattedData = {
+      title: capacitacionData.title,
+      teacher: capacitacionData.teacher,
+      date: capacitacionData.date,
+      description: capacitacionData.description || '',
+      evidence: capacitacionData.evidence || [],
+      observations: capacitacionData.observations || ''
+    };
+    
+    console.log("📤 Enviando al backend:", formattedData);
+    const response = await axios.patch(`/capacitacion/${capacitacionId}`, formattedData);
+    console.log("✅ Capacitación actualizada:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ Error actualizando capacitación:", error.response?.data || error.message);
+    throw error;
+  }
+},
+
+deleteCapacitacion: async (capacitacionId: string) => {
+  try {
+    const response = await axios.delete(`/capacitacion/${capacitacionId}`);
+    return response.data;
+  } catch (error: any) {
+    console.error("Error deleting capacitacion:", error.response?.data || error.message);
+    throw error;
+  }
+},
   // ========== ALERTAS ==========
   getAlerts: async () => {
     try {

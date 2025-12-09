@@ -9,7 +9,8 @@ import {
   Download,
   CheckCircle,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Award // Icono para capacitaciones
 } from 'lucide-react';
 import { Badge } from '../../components/badge';
 
@@ -20,7 +21,8 @@ interface StatsCardsProps {
   groups: any[];
   tutorias: any[];
   reports: any[];
-  alerts?: any[]; // Hacerlo opcional con ?
+  capacitaciones?: any[]; // Hacerlo opcional
+  alerts?: any[]; // Hacerlo opcional
 }
 
 export default function StatsCards({ 
@@ -30,16 +32,28 @@ export default function StatsCards({
   groups, 
   tutorias,
   reports,
+  capacitaciones = [], // Valor por defecto
   alerts = [] // Valor por defecto
 }: StatsCardsProps) {
   
-  // Calcular estadísticas
+  // Calcular estadísticas básicas
   const activeUsers = users.filter(u => u.status === 'active' || u.active).length;
   const activeCareers = careers.filter(c => c.status === 'active' || c.active).length;
   const completedReports = reports.filter(r => r.status === 'completed').length;
   const processingReports = reports.filter(r => r.status === 'processing').length;
   const totalDownloads = reports.reduce((sum, r) => sum + (r.downloadCount || 0), 0);
   
+  // Estadísticas de capacitaciones
+  const recentCapacitaciones = capacitaciones.filter(c => {
+    const capacitacionDate = new Date(c.date || c.createdAt);
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    return capacitacionDate > thirtyDaysAgo;
+  }).length;
+
+  const capacitacionesWithEvidence = capacitaciones.filter(c => 
+    c.evidence && c.evidence.length > 0
+  ).length;
+
   // Estadísticas de alertas
   const unresolvedAlerts = alerts.filter(a => !a.resolved).length;
   const highRiskAlerts = alerts.filter(a => a.riskLevel >= 0.8).length;
@@ -90,20 +104,35 @@ export default function StatsCards({
       icon: FileText,
       color: "text-red-600",
       bgColor: "bg-red-100"
-    },
-    {
-      title: "Reportes Generados",
-      value: reports.length,
-      subValue: `${completedReports} completados`,
-      icon: BarChart3,
-      color: "text-indigo-600",
-      bgColor: "bg-indigo-100"
     }
   ];
 
+  // Agregar tarjeta de capacitaciones si hay datos
+  if (capacitaciones.length > 0) {
+    statCards.splice(5, 0, {
+      title: "Capacitaciones",
+      value: capacitaciones.length,
+      subValue: `${recentCapacitaciones} últimos 30 días`,
+      icon: Award,
+      color: "text-amber-600",
+      bgColor: "bg-amber-100"
+    });
+  }
+
+  // Agregar tarjeta de reportes (siempre visible)
+  statCards.push({
+    title: "Reportes Generados",
+    value: reports.length,
+    subValue: `${completedReports} completados`,
+    icon: BarChart3,
+    color: "text-indigo-600",
+    bgColor: "bg-indigo-100"
+  });
+
   // Agregar tarjeta de alertas si hay datos
   if (alerts.length > 0) {
-    statCards.splice(5, 0, {
+    const alertIndex = capacitaciones.length > 0 ? 6 : 5; // Posición dinámica
+    statCards.splice(alertIndex, 0, {
       title: "Alertas Activas",
       value: alerts.length,
       subValue: `${unresolvedAlerts} pendientes`,
@@ -113,10 +142,21 @@ export default function StatsCards({
     });
   }
 
+  // Calcular columnas responsive dinámicamente
+  const totalCards = statCards.length;
+  const getGridCols = () => {
+    if (totalCards <= 2) return 'grid-cols-2';
+    if (totalCards <= 3) return 'grid-cols-3';
+    if (totalCards <= 4) return 'grid-cols-2 md:grid-cols-4';
+    if (totalCards <= 5) return 'grid-cols-2 md:grid-cols-5';
+    if (totalCards <= 6) return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6';
+    return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-7';
+  };
+
   return (
     <div className="space-y-6">
       {/* Cards principales */}
-      <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-${alerts.length > 0 ? '7' : '6'} gap-4`}>
+      <div className={`grid ${getGridCols()} gap-4`}>
         {statCards.map((stat, index) => (
           <Card key={index} className="overflow-hidden">
             <CardContent className="p-4">
@@ -143,6 +183,69 @@ export default function StatsCards({
           </Card>
         ))}
       </div>
+
+      {/* Estadísticas adicionales de capacitaciones */}
+      {capacitaciones.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+              <Award className="h-4 w-4 text-amber-500" />
+              Estadísticas de Capacitaciones
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-3 bg-amber-50 rounded-lg">
+                <div className="text-xl font-bold text-amber-700">{capacitaciones.length}</div>
+                <div className="text-sm text-amber-600">Total Capacitaciones</div>
+              </div>
+              
+              <div className="text-center p-3 bg-green-50 rounded-lg">
+                <div className="text-xl font-bold text-green-700">{recentCapacitaciones}</div>
+                <div className="text-sm text-green-600 flex items-center justify-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  Últimos 30 días
+                </div>
+              </div>
+              
+              <div className="text-center p-3 bg-blue-50 rounded-lg">
+                <div className="text-xl font-bold text-blue-700">{capacitacionesWithEvidence}</div>
+                <div className="text-sm text-blue-600">Con Evidencias</div>
+              </div>
+              
+              <div className="text-center p-3 bg-purple-50 rounded-lg">
+                <div className="text-xl font-bold text-purple-700">
+                  {capacitaciones.reduce((sum, c) => sum + (c.evidence?.length || 0), 0)}
+                </div>
+                <div className="text-sm text-purple-600">Total Evidencias</div>
+              </div>
+            </div>
+            
+            {/* Última capacitación registrada */}
+            {capacitaciones.length > 0 && (
+              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-medium text-amber-800">Última capacitación</h4>
+                    <p className="text-sm text-amber-600 truncate max-w-xs">
+                      {capacitaciones[0].title}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className="text-xs">
+                        {new Date(capacitaciones[0].date || capacitaciones[0].createdAt).toLocaleDateString()}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {capacitaciones[0].teacherName || 'Docente'}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {capacitaciones[0].evidence?.length || 0} evidencias
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Estadísticas adicionales de alertas */}
       {alerts.length > 0 && (
