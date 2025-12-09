@@ -8,7 +8,8 @@ import {
   BarChart3,
   Download,
   CheckCircle,
-  Clock
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
 import { Badge } from '../../components/badge';
 
@@ -19,6 +20,7 @@ interface StatsCardsProps {
   groups: any[];
   tutorias: any[];
   reports: any[];
+  alerts?: any[]; // Hacerlo opcional con ?
 }
 
 export default function StatsCards({ 
@@ -27,7 +29,8 @@ export default function StatsCards({
   subjects, 
   groups, 
   tutorias,
-  reports 
+  reports,
+  alerts = [] // Valor por defecto
 }: StatsCardsProps) {
   
   // Calcular estadísticas
@@ -36,6 +39,15 @@ export default function StatsCards({
   const completedReports = reports.filter(r => r.status === 'completed').length;
   const processingReports = reports.filter(r => r.status === 'processing').length;
   const totalDownloads = reports.reduce((sum, r) => sum + (r.downloadCount || 0), 0);
+  
+  // Estadísticas de alertas
+  const unresolvedAlerts = alerts.filter(a => !a.resolved).length;
+  const highRiskAlerts = alerts.filter(a => a.riskLevel >= 0.8).length;
+  const recentAlerts = alerts.filter(a => {
+    const alertDate = new Date(a.createdAt);
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    return alertDate > thirtyDaysAgo;
+  }).length;
   
   const statCards = [
     {
@@ -89,10 +101,22 @@ export default function StatsCards({
     }
   ];
 
+  // Agregar tarjeta de alertas si hay datos
+  if (alerts.length > 0) {
+    statCards.splice(5, 0, {
+      title: "Alertas Activas",
+      value: alerts.length,
+      subValue: `${unresolvedAlerts} pendientes`,
+      icon: AlertTriangle,
+      color: "text-red-600",
+      bgColor: "bg-red-100"
+    });
+  }
+
   return (
     <div className="space-y-6">
       {/* Cards principales */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-${alerts.length > 0 ? '7' : '6'} gap-4`}>
         {statCards.map((stat, index) => (
           <Card key={index} className="overflow-hidden">
             <CardContent className="p-4">
@@ -119,6 +143,72 @@ export default function StatsCards({
           </Card>
         ))}
       </div>
+
+      {/* Estadísticas adicionales de alertas */}
+      {alerts.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-red-500" />
+              Estadísticas de Alertas
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-3 bg-red-50 rounded-lg">
+                <div className="text-xl font-bold text-red-700">{alerts.length}</div>
+                <div className="text-sm text-red-600">Total Alertas</div>
+              </div>
+              
+              <div className="text-center p-3 bg-yellow-50 rounded-lg">
+                <div className="text-xl font-bold text-yellow-700">{unresolvedAlerts}</div>
+                <div className="text-sm text-yellow-600 flex items-center justify-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  Pendientes
+                </div>
+              </div>
+              
+              <div className="text-center p-3 bg-red-100 rounded-lg">
+                <div className="text-xl font-bold text-red-800">{highRiskAlerts}</div>
+                <div className="text-sm text-red-700">Alto Riesgo</div>
+              </div>
+              
+              <div className="text-center p-3 bg-blue-50 rounded-lg">
+                <div className="text-xl font-bold text-blue-700">{recentAlerts}</div>
+                <div className="text-sm text-blue-600">Últimos 30 días</div>
+              </div>
+            </div>
+            
+            {/* Última alerta generada */}
+            {alerts.length > 0 && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-medium text-red-800">Última alerta</h4>
+                    <p className="text-xs text-red-600 truncate max-w-xs">
+                      {alerts[0].message.length > 100 
+                        ? `${alerts[0].message.substring(0, 100)}...` 
+                        : alerts[0].message}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant={
+                        alerts[0].riskLevel >= 0.8 ? 'destructive' : 
+                        alerts[0].riskLevel >= 0.5 ? 'warning' : 'default'
+                      }>
+                        Riesgo: {Math.round(alerts[0].riskLevel * 100)}%
+                      </Badge>
+                      <Badge variant={alerts[0].resolved ? 'success' : 'warning'}>
+                        {alerts[0].resolved ? 'Resuelta' : 'Pendiente'}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {new Date(alerts[0].createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Estadísticas adicionales de reportes */}
       {reports.length > 0 && (

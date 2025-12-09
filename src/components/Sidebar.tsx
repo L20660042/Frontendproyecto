@@ -11,10 +11,10 @@ import {
   FileText,
   UsersIcon,
   Award,
-  Bell,
   FolderTree,
   Calendar,
-  MessageSquare
+  MessageSquare,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from './button';
 import { cn } from './lib/utils';
@@ -28,10 +28,11 @@ interface SidebarProps {
   userEmail?: string;
   onNavigate?: (view: string) => void;
   currentView?: string;
+  alertsCount?: number; // Nuevo prop para mostrar contador de alertas
 }
 
 // Menú actualizado para usar navegación por estado
-const menuItems: Record<string, Array<{icon: any, label: string, view: string}>> = {
+const menuItems: Record<string, Array<{icon: any, label: string, view: string, badge?: number}>> = {
   superadmin: [
     { icon: Home, label: 'Dashboard', view: 'dashboard' },
     { icon: Users, label: 'Usuarios', view: 'users' },
@@ -40,7 +41,7 @@ const menuItems: Record<string, Array<{icon: any, label: string, view: string}>>
     { icon: UsersIcon, label: 'Grupos', view: 'groups' },
     { icon: FolderTree, label: 'Tutorías', view: 'tutorias' },
     { icon: Award, label: 'Capacitaciones', view: 'capacitaciones' },
-    { icon: Bell, label: 'Alertas', view: 'alerts' },
+    { icon: AlertTriangle, label: 'Alertas', view: 'alerts' },
     { icon: FileText, label: 'Reportes', view: 'reports' },
   ],
   admin: [
@@ -50,6 +51,7 @@ const menuItems: Record<string, Array<{icon: any, label: string, view: string}>>
     { icon: BookOpen, label: 'Materias', view: 'materias' },
     { icon: BarChart3, label: 'Dashboard', view: 'admin-dashboard' },
     { icon: FileText, label: 'Catálogos', view: 'catalogos' },
+    { icon: AlertTriangle, label: 'Alertas', view: 'alerts' },
     { icon: User, label: 'Perfil', view: 'perfil' },
   ],
   docente: [
@@ -57,6 +59,7 @@ const menuItems: Record<string, Array<{icon: any, label: string, view: string}>>
     { icon: BarChart3, label: 'Dashboard', view: 'dashboard' },
     { icon: BookOpen, label: 'Mis Materias', view: 'materias' },
     { icon: Users, label: 'Mis Estudiantes', view: 'estudiantes' },
+    { icon: AlertTriangle, label: 'Alertas', view: 'alerts' },
     { icon: Building, label: 'Mi Institución', view: 'institucion' },
     { icon: FileText, label: 'Calificaciones', view: 'calificaciones' },
     { icon: User, label: 'Perfil', view: 'perfil' },
@@ -75,6 +78,7 @@ const menuItems: Record<string, Array<{icon: any, label: string, view: string}>>
     { icon: BarChart3, label: 'Dashboard', view: 'dashboard' },
     { icon: Users, label: 'Docentes', view: 'docentes' },
     { icon: BookOpen, label: 'Materias', view: 'materias' },
+    { icon: AlertTriangle, label: 'Alertas', view: 'alerts' },
     { icon: Building, label: 'Institución', view: 'institucion' },
     { icon: TrendingUp, label: 'Indicadores', view: 'indicadores' },
     { icon: User, label: 'Perfil', view: 'perfil' },
@@ -82,6 +86,7 @@ const menuItems: Record<string, Array<{icon: any, label: string, view: string}>>
   tutor: [
     { icon: Home, label: 'Inicio', view: 'inicio' },
     { icon: Users, label: 'Mis Estudiantes', view: 'estudiantes' },
+    { icon: AlertTriangle, label: 'Alertas', view: 'alerts' },
     { icon: MessageSquare, label: 'Tutorías', view: 'tutorias' },
     { icon: BarChart3, label: 'Seguimiento', view: 'seguimiento' },
     { icon: FileText, label: 'Reportes', view: 'reportes' },
@@ -90,6 +95,7 @@ const menuItems: Record<string, Array<{icon: any, label: string, view: string}>>
   psicopedagogico: [
     { icon: Home, label: 'Inicio', view: 'inicio' },
     { icon: Users, label: 'Alumnos en Riesgo', view: 'riesgo' },
+    { icon: AlertTriangle, label: 'Alertas', view: 'alerts' },
     { icon: BarChart3, label: 'Estadísticas', view: 'estadisticas' },
     { icon: MessageSquare, label: 'Tutorías', view: 'tutorias' },
     { icon: FileText, label: 'Reportes', view: 'reportes' },
@@ -100,6 +106,7 @@ const menuItems: Record<string, Array<{icon: any, label: string, view: string}>>
     { icon: GraduationCap, label: 'Capacitaciones', view: 'capacitaciones' },
     { icon: Users, label: 'Docentes', view: 'docentes' },
     { icon: BarChart3, label: 'Evaluación', view: 'evaluacion' },
+    { icon: AlertTriangle, label: 'Alertas', view: 'alerts' },
     { icon: FileText, label: 'Programas', view: 'programas' },
     { icon: User, label: 'Perfil', view: 'perfil' },
   ],
@@ -121,7 +128,8 @@ export function Sidebar({
   userName = 'Usuario', 
   userEmail = 'usuario@email.com',
   onNavigate,
-  currentView = 'dashboard'
+  currentView = 'dashboard',
+  alertsCount = 0
 }: SidebarProps) {
   const handleLogout = () => {
     authService.logout();
@@ -135,6 +143,14 @@ export function Sidebar({
     if (onNavigate) {
       onNavigate(view);
     }
+  };
+
+  // Función para obtener badge count según la vista
+  const getBadgeCount = (view: string) => {
+    if (view === 'alerts' && alertsCount > 0) {
+      return alertsCount;
+    }
+    return undefined;
   };
 
   return (
@@ -171,13 +187,14 @@ export function Sidebar({
         {currentMenuItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentView === item.view;
+          const badgeCount = getBadgeCount(item.view);
           
           return (
             <button
               key={item.view}
               onClick={() => handleNavigation(item.view)}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors group",
+                "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors group relative",
                 isActive
                   ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
@@ -185,6 +202,19 @@ export function Sidebar({
             >
               <Icon className="h-4 w-4 flex-shrink-0" />
               <span className="flex-1 text-left">{item.label}</span>
+              
+              {/* Badge para alertas */}
+              {badgeCount !== undefined && badgeCount > 0 && (
+                <span className={cn(
+                  "px-2 py-0.5 text-xs font-medium rounded-full",
+                  isActive 
+                    ? "bg-red-500 text-white" 
+                    : "bg-red-100 text-red-800"
+                )}>
+                  {badgeCount > 99 ? '99+' : badgeCount}
+                </span>
+              )}
+              
               {isActive && (
                 <div className="w-1 h-4 bg-current rounded-full opacity-60" />
               )}
@@ -214,7 +244,15 @@ export function Sidebar({
 }
 
 // Componente que detecta automáticamente el rol del usuario
-export function DynamicSidebar({ onNavigate, currentView }: { onNavigate?: (view: string) => void, currentView?: string }) {
+export function DynamicSidebar({ 
+  onNavigate, 
+  currentView,
+  alertsCount = 0 
+}: { 
+  onNavigate?: (view: string) => void, 
+  currentView?: string,
+  alertsCount?: number 
+}) {
   const [userData, setUserData] = useState<any>(null);
 
   useEffect(() => {
@@ -237,6 +275,7 @@ export function DynamicSidebar({ onNavigate, currentView }: { onNavigate?: (view
       userEmail={userData.email || 'usuario@email.com'}
       onNavigate={onNavigate}
       currentView={currentView}
+      alertsCount={alertsCount}
     />
   );
 }
