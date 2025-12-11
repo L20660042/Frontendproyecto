@@ -1327,5 +1327,55 @@ Contaduría,CONTA,Licenciatura en Contaduría,8,true`;
       console.log("⚠️ No se pudo obtener info del sistema");
       return { version: '1.0', status: 'unknown' };
     }
+  },
+  // ========== ENDPOINTS DE DOCENTE ==========
+getDocenteMaterias: async (docenteId: string) => {
+  try {
+    const response = await axios.get(`/docente/${docenteId}/materias`);
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ Error getting docente materias:", error);
+    return [];
   }
+},
+
+getDocenteEstudiantes: async (docenteId: string) => {
+  try {
+    const response = await axios.get(`/docente/${docenteId}/estudiantes`);
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ Error getting docente estudiantes:", error);
+    return [];
+  }
+},
+
+getDocenteAlertas: async (docenteId: string) => {
+  try {
+    const response = await axios.get(`/docente/${docenteId}/alertas`);
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ Error getting docente alerts:", error);
+    return [];
+  }
+},
+
+createTutoriaDocente: async (tutoriaData: any) => {
+  try {
+    const response = await axios.post('/tutorias/docente', tutoriaData);
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ Error creating tutoria:", error);
+    throw error;
+  }
+},
+
+resolveAlerta: async (alertaId: string) => {
+  try {
+    const response = await axios.patch(`/alertas/${alertaId}/resolve`);
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ Error resolving alert:", error);
+    throw error;
+  }
+},
 };

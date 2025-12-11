@@ -45,6 +45,8 @@ import EditTutoriaModal from '../../components/tutorias/EditTutoriaModal';
 // Modales de reportes
 import GenerateReportModal from '../../components/reports/GenerateReportModal';
 import ReportDetailsModal from '../../components/reports/ReportDetailsModal';
+import AlertsOverTimeChart from '../../components/commons/AlertsOverTimeChart';
+import RiskLevelChart from '../../components/commons/RiskLevelChart';
 
 // Interfaces
 interface User {
@@ -942,7 +944,21 @@ export default function SuperAdminDashboard() {
               capacitaciones={capacitaciones}
               alerts={alerts}
             />
-            
+            <StatsCards
+              users={users}
+              careers={careers}
+              subjects={subjects}
+              groups={groups}
+              tutorias={tutorias}
+              reports={reports}
+              capacitaciones={capacitaciones}
+              alerts={alerts}
+            />
+            {/* NUEVA SECCIÓN: GRÁFICAS DE RIESGO Y ALERTAS */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+              <RiskLevelChart alerts={alerts} />
+              <AlertsOverTimeChart alerts={alerts} />
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* QuickActions */}
               <div className="bg-card border rounded-lg p-6">
