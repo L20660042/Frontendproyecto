@@ -9,6 +9,7 @@ import JefeAcademicoDashboard from "./pages/dashboard/JefeAcademicoDashboard";
 import TutorDashboard from "./pages/dashboard/TutorDashboard";
 import PsicopedagogicoDashboard from "./pages/dashboard/PsicopedagogicoDashboard";
 import DesarrolloAcademicoDashboard from "./pages/dashboard/DesarrolloAcademicoDashboard";
+import ExcelPage from './pages/ExcelPage';
 
 export default function App() {
   return (
@@ -65,6 +66,13 @@ export default function App() {
         <Route path="/desarrollo-academico" element={
           <ProtectedRoute>
             <DesarrolloAcademicoDashboard />
+          </ProtectedRoute>
+        } />
+        
+        {/* AGREGAR ESTA RUTA PARA EXCEL */}
+        <Route path="/excel" element={
+          <ProtectedRoute>
+            <ExcelPage />
           </ProtectedRoute>
         } />
         

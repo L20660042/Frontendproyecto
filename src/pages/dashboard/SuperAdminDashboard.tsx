@@ -6,6 +6,7 @@ import { Badge } from '../../components/badge';
 import { Shield, RefreshCw, X, Check, FileText, BarChart3, Users, AlertCircle, Database, Award } from 'lucide-react';
 import { authService } from '../../services/authService';
 import axios from 'axios';
+import ExcelPage from '../../pages/ExcelPage';
 
 // Importar componentes
 import StatsCards from '../../components/commons/StatsCards';
@@ -1274,6 +1275,9 @@ export default function SuperAdminDashboard() {
           />
         );
 
+      case 'excel':
+        return <ExcelPage />;
+
       default:
         return (
           <div className="space-y-6">
@@ -1308,6 +1312,12 @@ export default function SuperAdminDashboard() {
                 <div className="mt-2 flex items-center gap-2 text-sm text-blue-600">
                   <FileText className="h-4 w-4" />
                   <span>Gestión de Reportes</span>
+                </div>
+              )}
+              {currentView === 'excel' && (
+                <div className="mt-2 flex items-center gap-2 text-sm text-green-600">
+                  <FileText className="h-4 w-4" />
+                  <span>Importación Masiva desde Excel</span>
                 </div>
               )}
             </div>

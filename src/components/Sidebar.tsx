@@ -14,7 +14,8 @@ import {
   FolderTree,
   Calendar,
   MessageSquare,
-  AlertTriangle
+  AlertTriangle,
+  FileSpreadsheet
 } from 'lucide-react';
 import { Button } from './button';
 import { cn } from './lib/utils';
@@ -39,6 +40,7 @@ const menuItems: Record<string, Array<{icon: any, label: string, view: string, b
     { icon: GraduationCap, label: 'Carreras', view: 'careers' },
     { icon: BookOpen, label: 'Materias', view: 'subjects' },
     { icon: UsersIcon, label: 'Grupos', view: 'groups' },
+    { icon: FileSpreadsheet, label: 'Importar Excel', view: 'excel' },
     { icon: FolderTree, label: 'Tutorías', view: 'tutorias' },
     { icon: Award, label: 'Capacitaciones', view: 'capacitaciones' },
     { icon: AlertTriangle, label: 'Alertas', view: 'alerts' },
@@ -55,14 +57,14 @@ const menuItems: Record<string, Array<{icon: any, label: string, view: string, b
     { icon: User, label: 'Perfil', view: 'perfil' },
   ],
   docente: [
-    { icon: Home, label: 'Inicio', view: 'inicio' },
-    { icon: BarChart3, label: 'Dashboard', view: 'dashboard' },
+    { icon: Home, label: 'Dashboard', view: 'dashboard' },
     { icon: BookOpen, label: 'Mis Materias', view: 'materias' },
     { icon: Users, label: 'Mis Estudiantes', view: 'estudiantes' },
-    { icon: AlertTriangle, label: 'Alertas', view: 'alerts' },
-    { icon: Building, label: 'Mi Institución', view: 'institucion' },
-    { icon: FileText, label: 'Calificaciones', view: 'calificaciones' },
-    { icon: User, label: 'Perfil', view: 'perfil' },
+    { icon: MessageSquare, label: 'Tutorías', view: 'tutorias' },
+    { icon: BarChart3, label: 'Evaluación Docente', view: 'evaluacion' },
+    { icon: AlertTriangle, label: 'Mis Alertas', view: 'alerts' },
+    { icon: FileText, label: 'Mis Reportes', view: 'reportes' },
+    { icon: User, label: 'Mi Perfil', view: 'perfil' },
   ],
   estudiante: [
     { icon: Home, label: 'Inicio', view: 'inicio' },
