@@ -41,13 +41,9 @@ export default function LoginPage() {
 
     try {
       console.log("Enviando solicitud de login...");
-      const response = await authService.login({ email, password });
 
-      console.log("Respuesta del backend:", response);
-
-      // Extraer token y usuario
-      const token = response?.data?.token;
-      const user = response?.data?.user;
+      // authService.login ahora devuelve directamente { token, user }
+      const { token, user } = await authService.login({ email, password });
 
       console.log("Token recibido:", token ? "✓ Presente" : "✗ Ausente");
       console.log("Usuario recibido:", user);
@@ -59,16 +55,12 @@ export default function LoginPage() {
         return;
       }
 
-      // Guardar en localStorage
-      localStorage.setItem("authToken", token);
-      localStorage.setItem("userData", JSON.stringify(user));
-
-      console.log("✅ Token y usuario almacenados en localStorage");
-      console.log("🎯 Rol para redirección:", user.role);
+      // Opcional: si quisieras manejar rememberMe distinto (sessionStorage vs localStorage),
+      // aquí sería el lugar. Por ahora asumimos que authService ya guardó en localStorage.
 
       // Determinar la ruta de redirección según el rol
       let redirectPath = "/dashboard";
-      
+
       switch (user.role) {
         case "superadmin":
           redirectPath = "/dashboard/superadmin";
@@ -100,8 +92,6 @@ export default function LoginPage() {
       }
 
       console.log("🔀 Redirigiendo a:", redirectPath);
-      
-      // Solo UNA llamada a navigate
       navigate(redirectPath, { replace: true });
 
     } catch (err: any) {
@@ -113,10 +103,10 @@ export default function LoginPage() {
           data: err.response.data,
           url: err.response.config?.url
         });
-        
+
         setError(
-          err.response.data?.error || 
-          err.response.data?.message || 
+          err.response.data?.error ||
+          err.response.data?.message ||
           "Error en el servidor"
         );
       } else if (err.request) {
@@ -151,7 +141,7 @@ export default function LoginPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
-                
+
                 {error && (
                   <Alert variant="destructive">
                     <AlertDescription>{error}</AlertDescription>

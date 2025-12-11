@@ -1,8 +1,8 @@
-import { 
-  BarChart3, 
-  BookOpen, 
-  Users, 
-  User, 
+import {
+  BarChart3,
+  BookOpen,
+  Users,
+  User,
   LogOut,
   Building,
   TrendingUp,
@@ -15,10 +15,11 @@ import {
   Calendar,
   MessageSquare,
   AlertTriangle,
-  FileSpreadsheet
+  FileSpreadsheet,
 } from 'lucide-react';
 import { Button } from './button';
-import { cn } from './lib/utils';
+// OJO: ajusta este import según tu estructura real
+import { cn } from '../components/lib/utils';
 import logo from '../assets/image.png';
 import { authService } from '../services/authService';
 import { useEffect, useState } from 'react';
@@ -29,11 +30,18 @@ interface SidebarProps {
   userEmail?: string;
   onNavigate?: (view: string) => void;
   currentView?: string;
-  alertsCount?: number; // Nuevo prop para mostrar contador de alertas
+  alertsCount?: number;
 }
 
-// Menú actualizado para usar navegación por estado
-const menuItems: Record<string, Array<{icon: any, label: string, view: string, badge?: number}>> = {
+type MenuItem = {
+  icon: any;
+  label: string;
+  view: string;
+  badge?: number;
+};
+
+// Menú por rol
+const menuItems: Record<string, MenuItem[]> = {
   superadmin: [
     { icon: Home, label: 'Dashboard', view: 'dashboard' },
     { icon: Users, label: 'Usuarios', view: 'users' },
@@ -125,20 +133,20 @@ const userRoleLabels: Record<string, string> = {
   'desarrollo-academico': 'Desarrollo Académico',
 };
 
-export function Sidebar({ 
-  userRole, 
-  userName = 'Usuario', 
+export function Sidebar({
+  userRole,
+  userName = 'Usuario',
   userEmail = 'usuario@email.com',
   onNavigate,
   currentView = 'dashboard',
-  alertsCount = 0
+  alertsCount = 0,
 }: SidebarProps) {
   const handleLogout = () => {
     authService.logout();
+    // Ajusta esta ruta según cómo sirvas el frontend
     window.location.href = '/Frontendproyecto';
   };
 
-  // Obtener menú para el rol actual
   const currentMenuItems = menuItems[userRole] || menuItems.docente;
 
   const handleNavigation = (view: string) => {
@@ -147,7 +155,6 @@ export function Sidebar({
     }
   };
 
-  // Función para obtener badge count según la vista
   const getBadgeCount = (view: string) => {
     if (view === 'alerts' && alertsCount > 0) {
       return alertsCount;
@@ -156,23 +163,25 @@ export function Sidebar({
   };
 
   return (
-    <div className="sidebar w-64 bg-sidebar border-r border-sidebar-border h-screen flex flex-col fixed left-0 top-0 bottom-0">
+    <div className="w-64 bg-sidebar border-r border-sidebar-border h-screen flex flex-col fixed left-0 top-0 bottom-0">
       {/* Header */}
       <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-            <img 
-              src={logo} 
-              alt="Metricampus Logo" 
+            <img
+              src={logo}
+              alt="Metricampus Logo"
               className="h-6 w-6 text-primary-foreground"
             />
           </div>
           <div>
             <h1 className="text-lg font-bold text-sidebar-foreground">Metricampus</h1>
-            <p className="text-xs text-muted-foreground">{userRoleLabels[userRole] || 'Usuario'}</p>
+            <p className="text-xs text-muted-foreground">
+              {userRoleLabels[userRole] || 'Usuario'}
+            </p>
           </div>
         </div>
-        
+
         {/* Información del usuario */}
         <div className="space-y-1">
           <p className="text-sm font-medium text-sidebar-foreground truncate">
@@ -184,39 +193,40 @@ export function Sidebar({
         </div>
       </div>
 
-      {/* Navegación Principal */}
+      {/* Navegación principal */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {currentMenuItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentView === item.view;
           const badgeCount = getBadgeCount(item.view);
-          
+
           return (
             <button
               key={item.view}
               onClick={() => handleNavigation(item.view)}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors group relative",
+                'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors group relative',
                 isActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-sm'
+                  : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
               )}
             >
               <Icon className="h-4 w-4 flex-shrink-0" />
               <span className="flex-1 text-left">{item.label}</span>
-              
-              {/* Badge para alertas */}
+
               {badgeCount !== undefined && badgeCount > 0 && (
-                <span className={cn(
-                  "px-2 py-0.5 text-xs font-medium rounded-full",
-                  isActive 
-                    ? "bg-red-500 text-white" 
-                    : "bg-red-100 text-red-800"
-                )}>
+                <span
+                  className={cn(
+                    'px-2 py-0.5 text-xs font-medium rounded-full',
+                    isActive
+                      ? 'bg-red-500 text-white'
+                      : 'bg-red-100 text-red-800',
+                  )}
+                >
                   {badgeCount > 99 ? '99+' : badgeCount}
                 </span>
               )}
-              
+
               {isActive && (
                 <div className="w-1 h-4 bg-current rounded-full opacity-60" />
               )}
@@ -225,7 +235,7 @@ export function Sidebar({
         })}
       </nav>
 
-      {/* Footer con Cerrar Sesión */}
+      {/* Footer / Logout */}
       <div className="p-4 border-t border-sidebar-border space-y-2 mt-auto">
         <Button
           onClick={handleLogout}
@@ -236,7 +246,7 @@ export function Sidebar({
           <LogOut className="h-4 w-4" />
           Cerrar Sesión
         </Button>
-        
+
         <div className="text-xs text-muted-foreground text-center pt-2">
           Metricampus v1.0
         </div>
@@ -246,14 +256,14 @@ export function Sidebar({
 }
 
 // Componente que detecta automáticamente el rol del usuario
-export function DynamicSidebar({ 
-  onNavigate, 
+export function DynamicSidebar({
+  onNavigate,
   currentView,
-  alertsCount = 0 
-}: { 
-  onNavigate?: (view: string) => void, 
-  currentView?: string,
-  alertsCount?: number 
+  alertsCount = 0,
+}: {
+  onNavigate?: (view: string) => void;
+  currentView?: string;
+  alertsCount?: number;
 }) {
   const [userData, setUserData] = useState<any>(null);
 
@@ -273,7 +283,9 @@ export function DynamicSidebar({
   return (
     <Sidebar
       userRole={userData.role || userData.userType || 'docente'}
-      userName={`${userData.firstName || userData.name || 'Usuario'} ${userData.lastName || ''}`}
+      userName={`${userData.firstName || userData.name || 'Usuario'} ${
+        userData.lastName || ''
+      }`}
       userEmail={userData.email || 'usuario@email.com'}
       onNavigate={onNavigate}
       currentView={currentView}

@@ -1,3 +1,4 @@
+// src/components/CalificacionesList.tsx
 import React, { useEffect, useState } from 'react';
 import { obtenerCalificacionesPorEstudiante } from '../services/calificacionesService';
 
@@ -21,7 +22,8 @@ const CalificacionesList: React.FC<Props> = ({ estudianteId }) => {
     const fetchCalificaciones = async () => {
       try {
         const data = await obtenerCalificacionesPorEstudiante(estudianteId);
-        setCalificaciones(data);
+        // Aseguramos que siempre sea arreglo
+        setCalificaciones(Array.isArray(data) ? data : []);
       } catch (err) {
         setError('No se pudieron cargar las calificaciones');
       } finally {
@@ -34,6 +36,10 @@ const CalificacionesList: React.FC<Props> = ({ estudianteId }) => {
 
   if (loading) return <div>Cargando calificaciones...</div>;
   if (error) return <div>{error}</div>;
+
+  if (!calificaciones.length) {
+    return <div>No hay calificaciones registradas.</div>;
+  }
 
   return (
     <div>

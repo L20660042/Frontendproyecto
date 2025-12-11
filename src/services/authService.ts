@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios from "axios"; 
 
 const API_URL = "https://mi-backendnew-production.up.railway.app";
 // Para desarrollo local: "http://localhost:3000"
@@ -62,12 +62,43 @@ export const authService = {
     try {
       console.log("📤 Enviando solicitud de login...");
       const response = await axios.post("/auth/login", credentials);
-      if (response.data.access_token) {
-        localStorage.setItem("authToken", response.data.access_token);
-        localStorage.setItem("userData", JSON.stringify(response.data.user));
-        console.log("✅ Token y usuario almacenados en localStorage");
+
+      console.log("🔎 Respuesta cruda de login:", response.data);
+
+      const raw = response.data;
+
+      // Intentar localizar el token en varias estructuras posibles
+      const token =
+        // Caso típico con interceptor: { success, data: { token, user } }
+        raw?.data?.token ??
+        // Sin interceptor: { token, user }
+        raw?.token ??
+        // Doble anidado: { success, data: { data: { token, user } } }
+        raw?.data?.data?.token ??
+        // Caso JWT estándar: { access_token, user }
+        raw?.access_token ??
+        raw?.data?.access_token;
+
+      // Intentar localizar el user en varias estructuras posibles
+      const user =
+        raw?.data?.user ??
+        raw?.user ??
+        raw?.data?.data?.user ??
+        raw?.data?.userData ??
+        raw?.userData;
+
+      if (!token || !user) {
+        console.error("⚠️ Login sin token o user. Estructura recibida:", raw);
+        throw new Error("Respuesta de login inválida");
       }
-      return response.data;
+
+      // Guardar en localStorage
+      localStorage.setItem("authToken", token);
+      localStorage.setItem("userData", JSON.stringify(user));
+      console.log("✅ Token y usuario almacenados en localStorage");
+
+      // Devuelve un objeto plano, sin .data
+      return { token, user };
     } catch (error: any) {
       console.error("❌ Login error:", error.response?.data || error.message);
       throw error;
@@ -1328,54 +1359,55 @@ Contaduría,CONTA,Licenciatura en Contaduría,8,true`;
       return { version: '1.0', status: 'unknown' };
     }
   },
+
   // ========== ENDPOINTS DE DOCENTE ==========
-getDocenteMaterias: async (docenteId: string) => {
-  try {
-    const response = await axios.get(`/docente/${docenteId}/materias`);
-    return response.data;
-  } catch (error: any) {
-    console.error("❌ Error getting docente materias:", error);
-    return [];
-  }
-},
+  getDocenteMaterias: async (docenteId: string) => {
+    try {
+      const response = await axios.get(`/docente/${docenteId}/materias`);
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ Error getting docente materias:", error);
+      return [];
+    }
+  },
 
-getDocenteEstudiantes: async (docenteId: string) => {
-  try {
-    const response = await axios.get(`/docente/${docenteId}/estudiantes`);
-    return response.data;
-  } catch (error: any) {
-    console.error("❌ Error getting docente estudiantes:", error);
-    return [];
-  }
-},
+  getDocenteEstudiantes: async (docenteId: string) => {
+    try {
+      const response = await axios.get(`/docente/${docenteId}/estudiantes`);
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ Error getting docente estudiantes:", error);
+      return [];
+    }
+  },
 
-getDocenteAlertas: async (docenteId: string) => {
-  try {
-    const response = await axios.get(`/docente/${docenteId}/alertas`);
-    return response.data;
-  } catch (error: any) {
-    console.error("❌ Error getting docente alerts:", error);
-    return [];
-  }
-},
+  getDocenteAlertas: async (docenteId: string) => {
+    try {
+      const response = await axios.get(`/docente/${docenteId}/alertas`);
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ Error getting docente alerts:", error);
+      return [];
+    }
+  },
 
-createTutoriaDocente: async (tutoriaData: any) => {
-  try {
-    const response = await axios.post('/tutorias/docente', tutoriaData);
-    return response.data;
-  } catch (error: any) {
-    console.error("❌ Error creating tutoria:", error);
-    throw error;
-  }
-},
+  createTutoriaDocente: async (tutoriaData: any) => {
+    try {
+      const response = await axios.post('/tutorias/docente', tutoriaData);
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ Error creating tutoria:", error);
+      throw error;
+    }
+  },
 
-resolveAlerta: async (alertaId: string) => {
-  try {
-    const response = await axios.patch(`/alertas/${alertaId}/resolve`);
-    return response.data;
-  } catch (error: any) {
-    console.error("❌ Error resolving alert:", error);
-    throw error;
-  }
-},
+  resolveAlerta: async (alertaId: string) => {
+    try {
+      const response = await axios.patch(`/alertas/${alertaId}/resolve`);
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ Error resolving alert:", error);
+      throw error;
+    }
+  },
 };

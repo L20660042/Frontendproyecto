@@ -1,3 +1,4 @@
+// src/pages/dashboard/EstudianteDashboard.tsx
 import { useEffect, useState } from 'react';
 import type { FormEvent, ChangeEvent } from 'react';
 
@@ -11,7 +12,14 @@ import {
 } from '../../components/card';
 import { Button } from '../../components/button';
 import { Badge } from '../../components/badge';
-import { BookOpen, Calendar, TrendingUp, MessageSquare, Bell, User } from 'lucide-react';
+import {
+  BookOpen,
+  Calendar,
+  TrendingUp,
+  MessageSquare,
+  Bell,
+  User,
+} from 'lucide-react';
 
 import { authService } from '../../services/authService';
 import { obtenerCalificacionesPorEstudiante } from '../../services/calificacionesService';
@@ -45,6 +53,11 @@ export default function EstudianteDashboard() {
   const [creatingTutoria, setCreatingTutoria] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Vista actual del panel del estudiante (conecta con el Sidebar)
+  const [currentView, setCurrentView] = useState<
+    'inicio' | 'materias' | 'rendimiento' | 'calificaciones' | 'horario' | 'tutorias' | 'perfil'
+  >('inicio');
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -76,7 +89,7 @@ export default function EstudianteDashboard() {
           setPromedioGeneral(null);
         }
 
-        // 2) Riesgo académico (ML) vía backend
+        // 2) Riesgo académico
         try {
           const riskRes = await studentService.getRiskAndRecommendations(user._id);
           setRisk(riskRes || null);
@@ -173,9 +186,14 @@ export default function EstudianteDashboard() {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <DynamicSidebar />
+      {/* Sidebar fijo, conectado a currentView */}
+      <DynamicSidebar
+        onNavigate={(view) => setCurrentView(view as typeof currentView)}
+        currentView={currentView}
+      />
 
-      <div className="flex-1">
+      {/* Contenido desplazado a la derecha (w-64 del sidebar) */}
+      <div className="flex-1 ml-64">
         <header className="bg-card border-b border-border p-6">
           <div className="flex justify-between items-center">
             <div>
@@ -193,7 +211,7 @@ export default function EstudianteDashboard() {
           </div>
         </header>
 
-        <main className="p-6">
+        <main className="p-6 space-y-8">
           {error && (
             <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
               {error}
@@ -206,279 +224,386 @@ export default function EstudianteDashboard() {
             </div>
           )}
 
-          {/* Resumen superior */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
-            {/* Promedio general */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Promedio General</CardTitle>
-                  <CardDescription>Este semestre</CardDescription>
-                </div>
-                <TrendingUp className="h-8 w-8 text-green-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">
-                  {promedioGeneral !== null ? promedioGeneral.toFixed(1) : '--'}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {promedioGeneral !== null
-                    ? 'Calculado a partir de tus calificaciones.'
-                    : 'Aún no hay suficientes calificaciones.'}
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Materias activas */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Materias Activas</CardTitle>
-                  <CardDescription>Cursando actualmente</CardDescription>
-                </div>
-                <BookOpen className="h-8 w-8 text-blue-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{materiasCount}</div>
-                <p className="text-sm text-muted-foreground">
-                  Materias con calificaciones registradas.
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Próximas evaluaciones (placeholder) */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Próximas Evaluaciones</CardTitle>
-                  <CardDescription>En los próximos 7 días</CardDescription>
-                </div>
-                <Calendar className="h-8 w-8 text-orange-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">0</div>
-                <p className="text-sm text-muted-foreground">
-                  Integra aquí tu módulo de calendario cuando esté listo.
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Riesgo académico */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Nivel de Riesgo</CardTitle>
-                  <CardDescription>Académico</CardDescription>
-                </div>
-                <User className="h-8 w-8 text-green-500" />
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <p className="text-sm text-muted-foreground">Calculando tu riesgo...</p>
-                ) : risk ? (
-                  <>
-                    <div className="text-3xl font-bold capitalize">
-                      {risk.risk_level}
+          {/* VISTA: INICIO */}
+          {currentView === 'inicio' && (
+            <>
+              {/* Resumen superior */}
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-4">
+                {/* Promedio general */}
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Promedio General</CardTitle>
+                      <CardDescription>Este semestre</CardDescription>
+                    </div>
+                    <TrendingUp className="h-8 w-8 text-green-500" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">
+                      {promedioGeneral !== null ? promedioGeneral.toFixed(1) : '--'}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Confianza: {(risk.confidence * 100).toFixed(0)}%
+                      {promedioGeneral !== null
+                        ? 'Calculado a partir de tus calificaciones.'
+                        : 'Aún no hay suficientes calificaciones.'}
                     </p>
-                    <Button
-                      className="mt-4"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleDownloadRecommendations}
-                    >
-                      Descargar recomendaciones
-                    </Button>
-                  </>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No hay información suficiente para calcular tu riesgo.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                  </CardContent>
+                </Card>
 
-          {/* Mi rendimiento / Mis materias */}
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle>Mis Materias Actuales</CardTitle>
-              <CardDescription>Desempeño en este semestre</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {user?._id ? (
-                <CalificacionesList estudianteId={user._id} />
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No se encontró información del estudiante.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+                {/* Materias activas */}
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Materias Activas</CardTitle>
+                      <CardDescription>Cursando actualmente</CardDescription>
+                    </div>
+                    <BookOpen className="h-8 w-8 text-blue-500" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{materiasCount}</div>
+                    <p className="text-sm text-muted-foreground">
+                      Materias con calificaciones registradas.
+                    </p>
+                  </CardContent>
+                </Card>
 
-          {/* Agendar tutoría + listado */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Formulario para agendar tutoría */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Agendar tutoría</CardTitle>
-                <CardDescription>Solicita una nueva sesión de tutoría académica</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form className="space-y-4" onSubmit={handleCreateTutoria}>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      ID del tutor
-                    </label>
-                    <input
-                      type="text"
-                      name="tutor"
-                      value={newTutoria.tutor}
-                      onChange={handleChangeNewTutoria}
-                      className="w-full rounded-md border px-3 py-2 text-sm"
-                      placeholder="Ej. 660f1c..."
-                    />
-                  </div>
+                {/* Próximas evaluaciones (placeholder) */}
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Próximas Evaluaciones</CardTitle>
+                      <CardDescription>En los próximos 7 días</CardDescription>
+                    </div>
+                    <Calendar className="h-8 w-8 text-orange-500" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">0</div>
+                    <p className="text-sm text-muted-foreground">
+                      Integra aquí tu módulo de calendario cuando esté listo.
+                    </p>
+                  </CardContent>
+                </Card>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      ID del grupo
-                    </label>
-                    <input
-                      type="text"
-                      name="group"
-                      value={newTutoria.group}
-                      onChange={handleChangeNewTutoria}
-                      className="w-full rounded-md border px-3 py-2 text-sm"
-                      placeholder="Ej. 6610ab..."
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Fecha y hora
-                    </label>
-                    <input
-                      type="datetime-local"
-                      name="date"
-                      value={newTutoria.date}
-                      onChange={handleChangeNewTutoria}
-                      className="w-full rounded-md border px-3 py-2 text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Tema
-                    </label>
-                    <input
-                      type="text"
-                      name="topic"
-                      value={newTutoria.topic}
-                      onChange={handleChangeNewTutoria}
-                      className="w-full rounded-md border px-3 py-2 text-sm"
-                      placeholder="Ej. Repaso de Álgebra"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Observaciones (opcional)
-                    </label>
-                    <textarea
-                      name="observations"
-                      value={newTutoria.observations || ''}
-                      onChange={handleChangeNewTutoria}
-                      className="w-full rounded-md border px-3 py-2 text-sm"
-                      rows={3}
-                      placeholder="Comentarios adicionales para el tutor"
-                    />
-                  </div>
-
-                  <Button type="submit" disabled={creatingTutoria}>
-                    {creatingTutoria ? 'Agendando...' : 'Agendar tutoría'}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-
-            {/* Lista de tutorías del estudiante */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Mis tutorías</CardTitle>
-                <CardDescription>Tutorías que has agendado</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {tutorias.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Aún no tienes tutorías agendadas.
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {tutorias.map((t) => (
-                      <div
-                        key={t._id}
-                        className="flex items-center justify-between p-3 border rounded-lg"
-                      >
-                        <div>
-                          <p className="font-medium">
-                            {t.topic || 'Tutoría académica'}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {t.date
-                              ? new Date(t.date).toLocaleString()
-                              : 'Sin fecha definida'}
-                            {' — Grupo: '}
-                            {t.group?.name || (t as any).group || 'N/A'}
-                          </p>
+                {/* Riesgo académico */}
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Nivel de Riesgo</CardTitle>
+                      <CardDescription>Académico</CardDescription>
+                    </div>
+                    <User className="h-8 w-8 text-green-500" />
+                  </CardHeader>
+                  <CardContent>
+                    {loading ? (
+                      <p className="text-sm text-muted-foreground">Calculando tu riesgo...</p>
+                    ) : risk ? (
+                      <>
+                        <div className="text-3xl font-bold capitalize">
+                          {risk.risk_level}
                         </div>
-                        <Badge variant="outline">
-                          {t.status || 'Pendiente'}
-                        </Badge>
-                      </div>
-                    ))}
+                        <p className="text-sm text-muted-foreground">
+                          Confianza: {(risk.confidence * 100).toFixed(0)}%
+                        </p>
+                        <Button
+                          className="mt-4"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDownloadRecommendations}
+                        >
+                          Descargar recomendaciones
+                        </Button>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        No hay información suficiente para calcular tu riesgo.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Mis materias / calificaciones resumidas */}
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle>Mis Materias Actuales</CardTitle>
+                  <CardDescription>Desempeño en este semestre</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {user?._id ? (
+                    <CalificacionesList estudianteId={user._id} />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No se encontró información del estudiante.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Acciones rápidas */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <Button
+                  className="h-24 flex-col gap-3"
+                  variant="outline"
+                  onClick={() => setCurrentView('calificaciones')}
+                >
+                  <BookOpen className="h-8 w-8" />
+                  <div className="text-center">
+                    <div>Historial Académico</div>
+                    <div className="text-xs text-muted-foreground">Ver mis calificaciones</div>
                   </div>
+                </Button>
+
+                <Button
+                  className="h-24 flex-col gap-3"
+                  variant="outline"
+                  onClick={() => setCurrentView('horario')}
+                >
+                  <Calendar className="h-8 w-8" />
+                  <div className="text-center">
+                    <div>Horario</div>
+                    <div className="text-xs text-muted-foreground">Ver mi horario semanal</div>
+                  </div>
+                </Button>
+
+                <Button
+                  className="h-24 flex-col gap-3"
+                  variant="outline"
+                  onClick={() => setCurrentView('tutorias')}
+                >
+                  <MessageSquare className="h-8 w-8" />
+                  <div className="text-center">
+                    <div>Solicitar Tutoría</div>
+                    <div className="text-xs text-muted-foreground">Agendar con mi tutor</div>
+                  </div>
+                </Button>
+
+                <Button
+                  className="h-24 flex-col gap-3"
+                  variant="outline"
+                  onClick={() => setCurrentView('perfil')}
+                >
+                  <User className="h-8 w-8" />
+                  <div className="text-center">
+                    <div>Mi Perfil</div>
+                    <div className="text-xs text-muted-foreground">Información personal</div>
+                  </div>
+                </Button>
+              </div>
+            </>
+          )}
+
+          {/* VISTA: CALIFICACIONES */}
+          {currentView === 'calificaciones' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Mis Calificaciones</CardTitle>
+                <CardDescription>Historial de calificaciones</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {user?._id ? (
+                  <CalificacionesList estudianteId={user._id} />
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No se encontró información del estudiante.
+                  </p>
                 )}
               </CardContent>
             </Card>
-          </div>
+          )}
 
-          {/* Acciones rápidas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <Button className="h-24 flex-col gap-3" variant="outline">
-              <BookOpen className="h-8 w-8" />
-              <div className="text-center">
-                <div>Historial Académico</div>
-                <div className="text-xs text-muted-foreground">Ver mis calificaciones</div>
-              </div>
-            </Button>
+          {/* VISTA: TUTORÍAS */}
+          {currentView === 'tutorias' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Formulario para agendar tutoría */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Agendar tutoría</CardTitle>
+                  <CardDescription>
+                    Solicita una nueva sesión de tutoría académica
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form className="space-y-4" onSubmit={handleCreateTutoria}>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        ID del tutor
+                      </label>
+                      <input
+                        type="text"
+                        name="tutor"
+                        value={newTutoria.tutor}
+                        onChange={handleChangeNewTutoria}
+                        className="w-full rounded-md border px-3 py-2 text-sm"
+                        placeholder="Ej. 660f1c..."
+                      />
+                    </div>
 
-            <Button className="h-24 flex-col gap-3" variant="outline">
-              <Calendar className="h-8 w-8" />
-              <div className="text-center">
-                <div>Horario</div>
-                <div className="text-xs text-muted-foreground">Ver mi horario semanal</div>
-              </div>
-            </Button>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        ID del grupo
+                      </label>
+                      <input
+                        type="text"
+                        name="group"
+                        value={newTutoria.group}
+                        onChange={handleChangeNewTutoria}
+                        className="w-full rounded-md border px-3 py-2 text-sm"
+                        placeholder="Ej. 6610ab..."
+                      />
+                    </div>
 
-            <Button className="h-24 flex-col gap-3" variant="outline">
-              <MessageSquare className="h-8 w-8" />
-              <div className="text-center">
-                <div>Solicitar Tutoría</div>
-                <div className="text-xs text-muted-foreground">Agendar con mi tutor</div>
-              </div>
-            </Button>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Fecha y hora
+                      </label>
+                      <input
+                        type="datetime-local"
+                        name="date"
+                        value={newTutoria.date}
+                        onChange={handleChangeNewTutoria}
+                        className="w-full rounded-md border px-3 py-2 text-sm"
+                      />
+                    </div>
 
-            <Button className="h-24 flex-col gap-3" variant="outline">
-              <User className="h-8 w-8" />
-              <div className="text-center">
-                <div>Mi Perfil</div>
-                <div className="text-xs text-muted-foreground">Información personal</div>
-              </div>
-            </Button>
-          </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Tema
+                      </label>
+                      <input
+                        type="text"
+                        name="topic"
+                        value={newTutoria.topic}
+                        onChange={handleChangeNewTutoria}
+                        className="w-full rounded-md border px-3 py-2 text-sm"
+                        placeholder="Ej. Repaso de Álgebra"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Observaciones (opcional)
+                      </label>
+                      <textarea
+                        name="observations"
+                        value={newTutoria.observations || ''}
+                        onChange={handleChangeNewTutoria}
+                        className="w-full rounded-md border px-3 py-2 text-sm"
+                        rows={3}
+                        placeholder="Comentarios adicionales para el tutor"
+                      />
+                    </div>
+
+                    <Button type="submit" disabled={creatingTutoria}>
+                      {creatingTutoria ? 'Agendando...' : 'Agendar tutoría'}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+
+              {/* Lista de tutorías del estudiante */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Mis tutorías</CardTitle>
+                  <CardDescription>Tutorías que has agendado</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {tutorias.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Aún no tienes tutorías agendadas.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {tutorias.map((t) => (
+                        <div
+                          key={t._id}
+                          className="flex items-center justify-between p-3 border rounded-lg"
+                        >
+                          <div>
+                            <p className="font-medium">
+                              {t.topic || 'Tutoría académica'}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {t.date
+                                ? new Date(t.date).toLocaleString()
+                                : 'Sin fecha definida'}
+                              {' — Grupo: '}
+                              {t.group?.name || (t as any).group || 'N/A'}
+                            </p>
+                          </div>
+                          <Badge variant="outline">
+                            {t.status || 'Pendiente'}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* VISTAS PENDIENTES: materias, rendimiento, horario, perfil */}
+          {currentView === 'materias' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Mis Materias</CardTitle>
+                <CardDescription>Listado de materias inscritas (pendiente de implementar).</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Aquí puedes agregar la vista detallada de tus materias cuando la tengas lista.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {currentView === 'rendimiento' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Mi Rendimiento</CardTitle>
+                <CardDescription>Análisis detallado de tu rendimiento académico.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Integra aquí gráficas o métricas avanzadas de rendimiento cuando lo definas.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {currentView === 'horario' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Mi Horario</CardTitle>
+                <CardDescription>Consulta tu horario de clases.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Aquí irá tu módulo de horario (tabla o calendario) cuando lo tengas listo.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {currentView === 'perfil' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Mi Perfil</CardTitle>
+                <CardDescription>Información personal del estudiante.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Nombre: {user?.nombre || user?.name || 'N/D'}
+                </p>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Correo: {user?.email || 'N/D'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Aquí puedes agregar edición de perfil más adelante.
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </main>
       </div>
     </div>
