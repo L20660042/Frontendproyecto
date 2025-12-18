@@ -5,115 +5,108 @@
 @custom-variant dark (&:is(.dark *));
 
 /* =========================
-   TEMA CLARO (por defecto)
+   TEMA CLARO (mejorado)
    ========================= */
 :root {
-  /* Base clara profesional (estilo dashboard corporativo) */
-  --background: #ffffff;           /* Fondo blanco total */
-  --foreground: #1E293B;           /* Texto gris-azul oscuro */
-  --card: #F9FAFB;                 /* Tarjetas ligeramente grises */
-  --card-foreground: #1E293B;
-  --popover: #ffffff;
-  --popover-foreground: #1E293B;
+  --background: #F8FAFC;
+  --foreground: #0F172A;
 
-  /* Colores de marca / acciones */
-  --primary: #2563EB;              /* Azul profesional */
-  --primary-foreground: #ffffff;
-  --secondary: #FACC15;            /* Amarillo dorado suave */
-  --secondary-foreground: #1E293B;
-  --accent: #3B82F6;               /* Azul vibrante para acentos */
-  --accent-foreground: #ffffff;
+  --card: #FFFFFF;
+  --card-foreground: #0F172A;
+  --popover: #FFFFFF;
+  --popover-foreground: #0F172A;
 
-  /* Estados */
-  --destructive: #EF4444;          /* Rojo moderno */
-  --destructive-foreground: #ffffff;
+  --primary: #4F46E5; /* indigo-600 */
+  --primary-foreground: #FFFFFF;
 
-  /* Superficies y bordes */
-  --muted: #F1F5F9;                /* Gris claro para secciones secundarias */
-  --muted-foreground: #64748B;     /* Texto suave */
-  --border: #E2E8F0;               /* Borde muy suave */
-  --input: #F8FAFC;                /* Fondos de inputs claros */
-  --ring: #2563EB;                 /* Anillo de enfoque */
+  --secondary: #F59E0B; /* amber-500 */
+  --secondary-foreground: #111827;
 
-  /* Gráficas */
-  --chart-1: #3B82F6;
-  --chart-2: #10B981;
+  --accent: #06B6D4; /* cyan-500 */
+  --accent-foreground: #06121B;
+
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+
+  --muted: #EEF2F7;
+  --muted-foreground: #64748B;
+
+  --border: #E2E8F0;
+  --input: #FFFFFF;
+  --ring: #4F46E5;
+
+  --chart-1: #4F46E5;
+  --chart-2: #22C55E;
   --chart-3: #F59E0B;
-  --chart-4: #8B5CF6;
-  --chart-5: #EC4899;
+  --chart-4: #EC4899;
+  --chart-5: #06B6D4;
 
-  /* Radios */
-  --radius: 0.75rem;
+  --radius: 0.85rem;
 
-  /* Sidebar */
-  --sidebar: #ffffff;
-  --sidebar-foreground: #1E293B;
-  --sidebar-primary: #2563EB;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #FACC15;
-  --sidebar-accent-foreground: #1E293B;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #0F172A;
+  --sidebar-primary: #4F46E5;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #06B6D4;
+  --sidebar-accent-foreground: #06121B;
   --sidebar-border: #E2E8F0;
-  --sidebar-ring: #2563EB;
+  --sidebar-ring: #4F46E5;
 }
 
 /* =========================
-   TEMA OSCURO (opcional)
-   Activa agregando .dark en <html> o <body>
+   TEMA OSCURO
    ========================= */
 .dark {
-  --background: #0F172A;           /* slate-900 aprox */
-  --foreground: #E2E8F0;           /* slate-200 */
+  --background: #0B1220;
+  --foreground: #E5E7EB;
 
-  --card: #111827;                 /* gray-900 aprox */
+  --card: #0F172A;
   --card-foreground: #E5E7EB;
 
-  --popover: #111827;
+  --popover: #0F172A;
   --popover-foreground: #E5E7EB;
 
-  --primary: #3B82F6;              /* Azul en dark */
-  --primary-foreground: #ffffff;
+  --primary: #6366F1; /* indigo-500 */
+  --primary-foreground: #0B1220;
 
-  --secondary: #FACC15;
-  --secondary-foreground: #1E293B;
+  --secondary: #FBBF24; /* amber-400 */
+  --secondary-foreground: #0B1220;
 
-  --accent: #60A5FA;               /* Azul claro para acentos */
-  --accent-foreground: #0B1220;
+  --accent: #22D3EE; /* cyan-400 */
+  --accent-foreground: #041017;
 
   --destructive: #F87171;
   --destructive-foreground: #0B1220;
 
-  --muted: #111827;                /* Superficie secundaria dark */
+  --muted: #111827;
   --muted-foreground: #94A3B8;
 
-  --border: #1F2937;               /* gray-800 */
-  --input: #0B1220;                /* fondo input oscuro controlado */
-  --ring: #3B82F6;
+  --border: #1F2937;
+  --input: #0B1220;
+  --ring: #6366F1;
 
-  --chart-1: #93C5FD;
-  --chart-2: #6EE7B7;
+  --chart-1: #818CF8;
+  --chart-2: #4ADE80;
   --chart-3: #FBBF24;
-  --chart-4: #C084FC;
-  --chart-5: #F472B6;
+  --chart-4: #F472B6;
+  --chart-5: #22D3EE;
 
-  --radius: 0.75rem;
+  --radius: 0.85rem;
 
-  --sidebar: #0F172A;
-  --sidebar-foreground: #E2E8F0;
-  --sidebar-primary: #3B82F6;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #FACC15;
-  --sidebar-accent-foreground: #0B1220;
+  --sidebar: #0B1220;
+  --sidebar-foreground: #E5E7EB;
+  --sidebar-primary: #6366F1;
+  --sidebar-primary-foreground: #0B1220;
+  --sidebar-accent: #22D3EE;
+  --sidebar-accent-foreground: #041017;
   --sidebar-border: #1F2937;
-  --sidebar-ring: #3B82F6;
+  --sidebar-ring: #6366F1;
 }
 
 /* =========================
-   Mapeo a tokens de Tailwind (@theme inline)
+   Tokens para Tailwind (@theme inline)
    ========================= */
 @theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
@@ -163,19 +156,15 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/* =========================
-   Estilos base
-   ========================= */
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground antialiased;
   }
 
-  /* Scrollbar minimal y acorde al tema */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -194,41 +183,17 @@
   }
 }
 
-/* =========================
-   Sugerencias de utilidades (opcionales)
-   ========================= */
-/* Tarjetas y contenedores */
+/* Utilidades opcionales */
 .card {
   @apply bg-card text-card-foreground rounded-[var(--radius-lg)] border border-border shadow-sm;
 }
-
-/* Botones */
 .btn-primary {
   @apply inline-flex items-center justify-center px-4 py-2 rounded-[var(--radius-md)]
-         bg-primary text-primary-foreground hover:opacity-90
-         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60;
+  bg-primary text-primary-foreground hover:opacity-90
+  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60;
 }
-
-.btn-secondary {
-  @apply inline-flex items-center justify-center px-4 py-2 rounded-[var(--radius-md)]
-         bg-secondary text-secondary-foreground hover:opacity-95
-         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60;
-}
-
-/* Inputs */
 .input {
   @apply w-full rounded-[var(--radius-md)] bg-input border border-border px-3 py-2
-         text-foreground placeholder-muted-foreground/70
-         focus:outline-none focus:ring-2 focus:ring-ring/60;
-}
-
-/* Sidebar */
-.sidebar {
-  @apply bg-sidebar text-sidebar-foreground border-r border-sidebar-border;
-}
-.sidebar .sidebar-primary {
-  @apply bg-sidebar-primary text-sidebar-primary-foreground;
-}
-.sidebar .sidebar-accent {
-  @apply bg-sidebar-accent text-sidebar-accent-foreground;
+  text-foreground placeholder-muted-foreground/70
+  focus:outline-none focus:ring-2 focus:ring-ring/60;
 }

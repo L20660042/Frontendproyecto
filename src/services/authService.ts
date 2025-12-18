@@ -1,72 +1,81 @@
-import axios from "axios";
-import { jwtDecode } from "jwt-decode";
+import { api } from "../api/client";
 
-const API_URL = import.meta.env.VITE_API_URL || "https://mi-backendnew-production.up.railway.app";
+export type AppRole =
+  | "superadmin"
+  | "admin"
+  | "docente"
+  | "estudiante"
+  | "jefe_departamento"
+  | "tutor"
+  | "control_escolar"
+  | "capacitacion";
 
-const api = axios.create({
-  baseURL: API_URL,
-  withCredentials: false,
-});
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-interface JwtPayload {
-  sub: string;
-  username?: string;
-  email?: string;
-  roles?: string[]; // lo que pongas en el payload del backend
-}
-
-export interface User {
+export type AuthUser = {
   id: string;
-  username: string;
-  email?: string;
-  role: string;     // rol principal (el que usas en el switch del Login)
-  roles: string[];  // todos los roles
-}
+  email: string;
+  role: AppRole;
+  roles?: string[]; // opcional: roles originales del backend
+};
 
-async function login({ email, password }: LoginRequest): Promise<{ token: string; user: User }> {
-  // IMPORTANTE: si tu backend espera "username", le mandamos el correo en ese campo
-  const response = await api.post("/auth/login", {
-    username: email,
-    password,
-  });
+function mapBackendRolesToAppRole(roles?: string[]): AppRole {
+  const r = (roles?.[0] || "").toUpperCase();
 
-  const token: string = response.data.access_token || response.data.token;
-
-  if (!token) {
-    throw new Error("La respuesta del backend no contiene un token");
-  }
-
-  // Decodificamos el JWT para sacar los roles
-  const payload = jwtDecode<JwtPayload>(token);
-  const rolesFromToken = payload.roles ?? [];
-
-  // Normalizamos a minúsculas para que coincida con tu switch
-  const normalizedRoles = rolesFromToken.map((r) => r.toLowerCase());
-
-  const mainRole =
-    normalizedRoles[0] ||
-    "estudiante"; // rol por defecto si no viene nada
-
-  const user: User = {
-    id: payload.sub,
-    username: payload.username || email,
-    email: payload.email || email,
-    role: mainRole,     // aquí será "superadmin", "admin", "docente", etc.
-    roles: normalizedRoles,
+  const map: Record<string, AppRole> = {
+    SUPERADMIN: "superadmin",
+    ADMIN: "admin",
+    DOCENTE: "docente",
+    ALUMNO: "estudiante",
+    JEFE: "jefe_departamento",
+    SUBDIRECCION: "admin",
+    SERVICIOS_ESCOLARES: "control_escolar",
+    DESARROLLO_ACADEMICO: "capacitacion",
   };
 
-  // Guardar token/usuario (tu LoginPage asume que ya está todo guardado)
-  localStorage.setItem("token", token);
-  localStorage.setItem("user", JSON.stringify(user));
-
-  return { token, user };
+  return map[r] ?? "admin";
 }
 
-export const authService = {
-  login,
+const authService = {
+  async login(payload: { email: string; password: string }) {
+    const res = await api.post("/auth/login", payload);
+
+    const token: string | undefined = res.data?.access_token;
+    const rawUser = res.data?.user;
+
+    if (!token || !rawUser) {
+      throw new Error("Respuesta inválida del servidor (sin token o user).");
+    }
+
+    const user: AuthUser = {
+      id: rawUser.id ?? rawUser._id,
+      email: rawUser.email,
+      role: rawUser.role ?? mapBackendRolesToAppRole(rawUser.roles),
+      roles: rawUser.roles ?? [],
+    };
+
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(user));
+
+    return { token, user };
+  },
+
+  logout() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+  },
+
+  getUser(): AuthUser | null {
+    const raw = localStorage.getItem("user");
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as AuthUser;
+    } catch {
+      return null;
+    }
+  },
+
+  getToken(): string | null {
+    return localStorage.getItem("token");
+  },
 };
+
+export default authService;

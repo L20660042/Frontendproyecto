@@ -6,9 +6,10 @@ import { Input } from "../components/input";
 import { Label } from "../components/label";
 import { Alert, AlertDescription } from "../components/alert";
 import { Eye, EyeOff, Shield, Users, BarChart3 } from "lucide-react";
-import { authService } from "../services/authService";
-import logo from '../assets/image.png';
+import logo from "../assets/image.png";
 import { Checkbox } from "../components/checkbox";
+import authService from "../services/authService";
+import { useAuth } from "../auth/AuthContext";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -20,10 +21,10 @@ export default function LoginPage() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const navigate = useNavigate();
+  const { setSession } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     setIsLoading(true);
     setError("");
 
@@ -40,14 +41,7 @@ export default function LoginPage() {
     }
 
     try {
-      console.log("Enviando solicitud de login...");
-
-      // authService.login ahora devuelve directamente { token, user }
       const { token, user } = await authService.login({ email, password });
-
-      console.log("Token recibido:", token ? "✓ Presente" : "✗ Ausente");
-      console.log("Usuario recibido:", user);
-      console.log("Rol del usuario:", user?.role);
 
       if (!token || !user) {
         setError("No se recibió token de autenticación o información del usuario.");
@@ -55,10 +49,13 @@ export default function LoginPage() {
         return;
       }
 
-      // Opcional: si quisieras manejar rememberMe distinto (sessionStorage vs localStorage),
-      // aquí sería el lugar. Por ahora asumimos que authService ya guardó en localStorage.
+      // Si quieres diferenciar rememberMe:
+      // - true: localStorage (ya lo hace authService)
+      // - false: sessionStorage (requeriría cambiar authService)
+      // Por ahora lo dejamos como está para estabilidad.
 
-      // Determinar la ruta de redirección según el rol
+      setSession(token, user);
+
       let redirectPath = "/dashboard";
 
       switch (user.role) {
@@ -81,38 +78,23 @@ export default function LoginPage() {
           redirectPath = "/tutor";
           break;
         case "control_escolar":
-          redirectPath = "/psicopedagogico";
+          redirectPath = "/control-escolar";
           break;
         case "capacitacion":
           redirectPath = "/desarrollo-academico";
           break;
         default:
-          console.warn("⚠️ Rol no reconocido:", user.role);
           redirectPath = "/dashboard";
       }
 
-      console.log("🔀 Redirigiendo a:", redirectPath);
       navigate(redirectPath, { replace: true });
-
     } catch (err: any) {
-      console.error("❌ Error completo:", err);
-
-      if (err.response) {
-        console.error("Detalles del error:", {
-          status: err.response.status,
-          data: err.response.data,
-          url: err.response.config?.url
-        });
-
-        setError(
-          err.response.data?.error ||
-          err.response.data?.message ||
-          "Error en el servidor"
-        );
-      } else if (err.request) {
+      if (err?.response) {
+        setError(err.response.data?.error || err.response.data?.message || "Error en el servidor");
+      } else if (err?.request) {
         setError("No se pudo conectar con el servidor. Verifica el backend.");
       } else {
-        setError("Error inesperado: " + err.message);
+        setError("Error inesperado: " + (err?.message || "desconocido"));
       }
     } finally {
       setIsLoading(false);
@@ -126,7 +108,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md space-y-6">
           <div className="text-center space-y-2">
             <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center">
+              <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-sm">
                 <img src={logo} alt="Logo de Metricampus" className="w-12 h-12 object-contain" />
               </div>
             </div>
@@ -134,14 +116,13 @@ export default function LoginPage() {
             <p className="text-muted-foreground">Accede al sistema de Metricampus</p>
           </div>
 
-          <Card className="border-border/50">
+          <Card className="border-border/60">
             <CardHeader className="space-y-1">
               <CardTitle className="text-xl">Bienvenido de vuelta</CardTitle>
               <CardDescription>Ingresa tus credenciales para acceder al tablero</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
-
                 {error && (
                   <Alert variant="destructive">
                     <AlertDescription>{error}</AlertDescription>
@@ -242,7 +223,7 @@ export default function LoginPage() {
       </div>
 
       {/* Lado derecho - Información */}
-      <div className="hidden lg:flex flex-1 bg-muted/30 items-center justify-center p-8">
+      <div className="hidden lg:flex flex-1 bg-muted/50 items-center justify-center p-8">
         <div className="max-w-md space-y-8">
           <div className="text-center space-y-4">
             <h2 className="text-2xl font-bold text-foreground">Sistema Académico Avanzado</h2>
@@ -252,16 +233,13 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-6">
-            {/* Cards informativas */}
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
                 <BarChart3 className="w-6 h-6 text-primary" />
               </div>
               <div>
                 <h3 className="font-semibold text-foreground mb-1">Tablero de Indicadores</h3>
-                <p className="text-sm text-muted-foreground">
-                  Visualiza métricas académicas en tiempo real
-                </p>
+                <p className="text-sm text-muted-foreground">Visualiza métricas académicas en tiempo real</p>
               </div>
             </div>
 
@@ -271,24 +249,19 @@ export default function LoginPage() {
               </div>
               <div>
                 <h3 className="font-semibold text-foreground mb-1">Gestión Integral</h3>
-                <p className="text-sm text-muted-foreground">
-                  Administra estudiantes, docentes y recursos académicos
-                </p>
+                <p className="text-sm text-muted-foreground">Administra estudiantes, docentes y recursos académicos</p>
               </div>
             </div>
 
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-chart-3/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Shield className="w-6 h-6 text-chart-3" />
+              <div className="w-12 h-12 bg-secondary/15 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Shield className="w-6 h-6 text-secondary" />
               </div>
               <div>
                 <h3 className="font-semibold text-foreground mb-1">Seguridad Avanzada</h3>
-                <p className="text-sm text-muted-foreground">
-                  Protección de datos institucionales con altos estándares
-                </p>
+                <p className="text-sm text-muted-foreground">Protección de datos institucionales con altos estándares</p>
               </div>
             </div>
-
           </div>
         </div>
       </div>
