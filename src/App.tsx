@@ -1,12 +1,24 @@
+import CareersPage from "./pages/catalogos/CareersPage";
+import GroupsPage from "./pages/catalogos/GroupsPage";
+import SubjectsPage from "./pages/catalogos/SubjectsPage";
 import { Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
+import RequireAuth from "./auth/RequireAuth";
+import { RequireRole } from "./auth/RequireRole";
+import PeriodsPage from "./pages/catalogos/PeriodsPage";
+import DashboardLayout from "./layout/DashboardLayout";
+import SchedulesPage from "./pages/horarios/SchedulesPage";
 
-function Placeholder({ title }: { title: string }) {
+function SimpleHome({ title }: { title: string }) {
   return (
-    <div className="min-h-screen bg-background text-foreground p-8">
-      <h1 className="text-2xl font-bold">{title}</h1>
-      <p className="text-muted-foreground mt-2">Pantalla placeholder. Conecta tu layout real aquí.</p>
-    </div>
+    <DashboardLayout title={title}>
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold">Bienvenido</h2>
+        <p className="text-muted-foreground">
+          Este es un placeholder de inicio. A partir de aquí montamos tus dashboards reales.
+        </p>
+      </div>
+    </DashboardLayout>
   );
 }
 
@@ -15,22 +27,124 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
 
-      {/* Dashboards/roles */}
-      <Route path="/dashboard" element={<Placeholder title="Dashboard" />} />
-      <Route path="/dashboard/superadmin" element={<Placeholder title="Dashboard Superadmin" />} />
-      <Route path="/dashboard/admin" element={<Placeholder title="Dashboard Admin" />} />
+      {/* Homes por rol */}
+      <Route
+        path="/dashboard/superadmin"
+        element={
+          <RequireRole allow={["superadmin"]}>
+            <SimpleHome title="Dashboard Superadmin" />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/dashboard/admin"
+        element={
+          <RequireRole allow={["admin"]}>
+            <SimpleHome title="Dashboard Admin" />
+          </RequireRole>
+        }
+      />
 
-      <Route path="/docente" element={<Placeholder title="Panel Docente" />} />
-      <Route path="/estudiante" element={<Placeholder title="Panel Estudiante" />} />
-      <Route path="/jefe-academico" element={<Placeholder title="Panel Jefe Académico" />} />
-      <Route path="/tutor" element={<Placeholder title="Panel Tutor" />} />
-      <Route path="/control-escolar" element={<Placeholder title="Panel Control Escolar" />} />
-      <Route path="/desarrollo-academico" element={<Placeholder title="Panel Desarrollo Académico" />} />
+      <Route
+        path="/control-escolar"
+        element={
+          <RequireRole allow={["control_escolar"]}>
+            <SimpleHome title="Panel Control Escolar" />
+          </RequireRole>
+        }
+      />
 
-      {/* Otros */}
-      <Route path="/terms" element={<Placeholder title="Términos y Condiciones" />} />
-      <Route path="/register" element={<Placeholder title="Registro" />} />
+      <Route
+        path="/docente"
+        element={
+          <RequireRole allow={["docente"]}>
+            <SimpleHome title="Panel Docente" />
+          </RequireRole>
+        }
+      />
 
+      <Route
+        path="/estudiante"
+        element={
+          <RequireRole allow={["estudiante"]}>
+            <SimpleHome title="Panel Estudiante" />
+          </RequireRole>
+        }
+      />
+
+      <Route
+        path="/jefe-academico"
+        element={
+          <RequireRole allow={["jefe_departamento"]}>
+            <SimpleHome title="Panel Jefe Académico" />
+          </RequireRole>
+        }
+      />
+
+      <Route
+        path="/tutor"
+        element={
+          <RequireRole allow={["tutor"]}>
+            <SimpleHome title="Panel Tutor" />
+          </RequireRole>
+        }
+      />
+
+      <Route
+        path="/desarrollo-academico"
+        element={
+          <RequireRole allow={["capacitacion"]}>
+            <SimpleHome title="Panel Desarrollo Académico" />
+          </RequireRole>
+        }
+      />
+
+      {/* Catálogos */}
+      <Route
+        path="/catalogos/periodos"
+        element={
+          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
+            <PeriodsPage />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/catalogos/carreras"
+        element={
+          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
+            <CareersPage />
+          </RequireRole>
+        }
+      />
+
+      <Route
+        path="/catalogos/grupos"
+        element={
+          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
+            <GroupsPage />
+          </RequireRole>
+        }
+      />
+
+      <Route
+        path="/catalogos/materias"
+        element={
+          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
+            <SubjectsPage />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/horarios"
+        element={
+          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
+            <SchedulesPage />
+          </RequireRole>
+        }
+      />
+
+      {/* Genéricos */}
+      <Route path="/dashboard" element={<RequireAuth><Navigate to="/dashboard/admin" replace /></RequireAuth>} />
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
