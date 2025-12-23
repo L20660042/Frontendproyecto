@@ -15,16 +15,13 @@ function getToken() {
 
 api.interceptors.request.use((config) => {
   const token = getToken();
+  const isLogin = config.url?.includes("/auth/login");
 
   config.headers = config.headers ?? {};
-
-  if (token) {
+  if (token && !isLogin) {
     (config.headers as any)["Authorization"] = `Bearer ${token}`;
   }
 
-  // LOG TEMPORAL (quítalo después)
   console.log("[API]", config.method?.toUpperCase(), config.url, "Auth?", !!(config.headers as any)["Authorization"]);
-
   return config;
 });
-

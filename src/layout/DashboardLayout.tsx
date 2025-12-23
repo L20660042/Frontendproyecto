@@ -22,6 +22,8 @@ const NAV: NavItem[] = [
   { label: "Catálogo: Carreras", to: "/catalogos/carreras", roles: ["superadmin", "admin", "control_escolar"] },
   { label: "Catálogo: Grupos", to: "/catalogos/grupos", roles: ["superadmin", "admin", "control_escolar"] },
   { label: "Catálogo: Materias", to: "/catalogos/materias", roles: ["superadmin", "admin", "control_escolar"] },
+  { label: "Usuarios", to: "/dashboard/usuarios", roles: ["superadmin", "admin", "control_escolar"] },
+
 ];
 
 function RoleBadge({ role }: { role: string }) {

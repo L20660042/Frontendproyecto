@@ -8,6 +8,10 @@ import { RequireRole } from "./auth/RequireRole";
 import PeriodsPage from "./pages/catalogos/PeriodsPage";
 import DashboardLayout from "./layout/DashboardLayout";
 import SchedulesPage from "./pages/horarios/SchedulesPage";
+import TeacherSchedulePage from "./pages/docente/HorarioDocente";
+import StudentSchedulePage from "./pages/alumno/HorarioAlumno";
+import UsersPage from "./pages/admin/UsersPage";
+
 
 function SimpleHome({ title }: { title: string }) {
   return (
@@ -142,6 +146,31 @@ export default function App() {
           </RequireRole>
         }
       />
+      <Route
+          path="/estudiante/horario"
+          element={
+            <RequireRole allow={["estudiante"]}>
+              <StudentSchedulePage />
+            </RequireRole>
+          }
+        />
+      <Route
+        path="/docente/horario"
+        element={
+          <RequireRole allow={["docente"]}>
+            <TeacherSchedulePage />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/dashboard/usuarios"
+        element={
+          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
+            <UsersPage />
+          </RequireRole>
+        }
+      />
+
 
       {/* Genéricos */}
       <Route path="/dashboard" element={<RequireAuth><Navigate to="/dashboard/admin" replace /></RequireAuth>} />

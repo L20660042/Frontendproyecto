@@ -1,39 +1,82 @@
-import { useEffect, useState } from "react";
+import React from "react";
+import DashboardLayout from "../../layout/DashboardLayout";
 import { api } from "../../api/client";
-import { useAuth } from "../../auth/AuthContext";
-import WeeklySchedule from "../../components/WeeklySchedule";
+import WeeklyScheduleGrid, { type ScheduleBlockUI } from "../../components/schedule/WeeklyScheduleGrid";
+import { Alert, AlertDescription } from "../../components/alert";
 
-export default function HorarioDocente() {
-  const { periodId, teacherId, logout } = useAuth();
-  const [blocks, setBlocks] = useState<any[]>([]);
-  const [error, setError] = useState<string>("");
+type Period = { _id: string; name: string; isActive: boolean };
 
-  useEffect(() => {
+export default function TeacherSchedulePage() {
+  const [periods, setPeriods] = React.useState<Period[]>([]);
+  const [periodId, setPeriodId] = React.useState("");
+  const [blocks, setBlocks] = React.useState<ScheduleBlockUI[]>([]);
+  const [error, setError] = React.useState("");
+
+  React.useEffect(() => {
     (async () => {
       setError("");
       try {
-        const res = await api.get("/academic/schedule/teacher", { params: { periodId, teacherId } });
-        setBlocks(res.data);
+        const res = await api.get("/academic/periods");
+        const list: Period[] = res.data ?? [];
+        setPeriods(list);
+        const active = list.find((p) => p.isActive);
+        if (active) setPeriodId(active._id);
       } catch (e: any) {
-        setError(e?.response?.data?.message ?? "Error consultando horario");
+        setError(e?.response?.data?.message ?? "Error al cargar periodos");
       }
     })();
-  }, [periodId, teacherId]);
+  }, []);
+
+  React.useEffect(() => {
+    (async () => {
+      setError("");
+      setBlocks([]);
+      if (!periodId) return;
+
+      try {
+        const res = await api.get("/academic/schedule/me", { params: { periodId } });
+        const ui: ScheduleBlockUI[] = (res.data ?? []).map((b: any) => ({
+          _id: b._id,
+          dayOfWeek: b.dayOfWeek,
+          startTime: b.startTime,
+          endTime: b.endTime,
+          room: b.room,
+          subjectName: b.subjectId?.name ?? b.subject?.name,
+          teacherName: b.teacherId?.name ?? b.teacher?.name,
+          groupName: b.groupId?.name ?? b.group?.name,
+        }));
+        setBlocks(ui);
+      } catch (e: any) {
+        setError(e?.response?.data?.message ?? "Error al cargar mis clases");
+      }
+    })();
+  }, [periodId]);
 
   return (
-    <div style={{ padding: 24 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-        <h2>Horario del Docente</h2>
-        <button onClick={logout}>Salir</button>
+    <DashboardLayout title="Mis clases">
+      {error ? (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className="mb-4">
+        <label className="text-sm text-muted-foreground">Periodo</label>
+        <select
+          className="mt-1 h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
+          value={periodId}
+          onChange={(e) => setPeriodId(e.target.value)}
+        >
+          <option value="">Selecciona...</option>
+          {periods.map((p) => (
+            <option key={p._id} value={p._id}>
+              {p.name}{p.isActive ? " (Activo)" : ""}
+            </option>
+          ))}
+        </select>
       </div>
 
-      <div style={{ margin: "8px 0 16px", opacity: 0.8 }}>
-        periodId: {periodId} · teacherId: {teacherId}
-      </div>
-
-      {error && <div style={{ padding: 10, border: "1px solid #f2c", borderRadius: 8, marginBottom: 12 }}>{error}</div>}
-
-      <WeeklySchedule blocks={blocks} />
-    </div>
+      <WeeklyScheduleGrid title="Horario semanal" description="Mis bloques de clase" blocks={blocks} />
+    </DashboardLayout>
   );
 }
