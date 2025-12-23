@@ -15,6 +15,14 @@ type UserRow = {
   linkedEntityId?: string | null;
 };
 
+const ROLE_OPTIONS = [
+  "SUPERADMIN",
+  "ADMIN",
+  "SERVICIOS_ESCOLARES",
+  "DOCENTE",
+  "ALUMNO",
+];
+
 export default function UsersPage() {
   const [rows, setRows] = React.useState<UserRow[]>([]);
   const [error, setError] = React.useState("");
@@ -24,8 +32,12 @@ export default function UsersPage() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [role, setRole] = React.useState("DOCENTE");
-  const [status, setStatus] = React.useState<"active" | "disabled" | "pending">("active");
+  const [status, setStatus] = React.useState<UserRow["status"]>("active");
   const [linkedEntityId, setLinkedEntityId] = React.useState("");
+
+  // NUEVO: para autocrear teacher cuando role=DOCENTE y NO se provee linkedEntityId
+  const [teacherName, setTeacherName] = React.useState("");
+  const [employeeNumber, setEmployeeNumber] = React.useState("");
 
   const load = React.useCallback(async () => {
     setError("");
@@ -34,7 +46,6 @@ export default function UsersPage() {
       const res = await api.get("/users");
       setRows(res.data ?? []);
     } catch (e: any) {
-      console.error("GET /users error:", e?.response?.data ?? e);
       setError(e?.response?.data?.message ?? "Error al cargar usuarios");
     } finally {
       setLoading(false);
@@ -47,29 +58,45 @@ export default function UsersPage() {
 
   const createUser = async () => {
     setError("");
+
+    // Validaciones mínimas del lado del front
+    if (!email.trim()) return setError("Email requerido");
+    if (!password.trim()) return setError("Password requerido");
+
+    const isDocenteAuto = role === "DOCENTE" && !linkedEntityId.trim();
+
+    if (isDocenteAuto) {
+      if (!teacherName.trim()) return setError("Nombre del docente requerido (teacherName)");
+      if (!employeeNumber.trim()) return setError("No. empleado requerido (employeeNumber)");
+    }
+
     try {
+      setLoading(true);
+
       await api.post("/users", {
-        email,
+        email: email.trim(),
         password,
         roles: [role],
         status,
-        linkedEntityId: linkedEntityId || undefined,
+        linkedEntityId: linkedEntityId.trim() || undefined,
+
+        // SOLO cuando sea DOCENTE y no mandes linkedEntityId:
+        ...(isDocenteAuto
+          ? { teacherName: teacherName.trim(), employeeNumber: employeeNumber.trim() }
+          : {}),
       });
 
       setEmail("");
       setPassword("");
       setLinkedEntityId("");
-      setStatus("active");
-      setRole("DOCENTE");
-
+      setTeacherName("");
+      setEmployeeNumber("");
       await load();
     } catch (e: any) {
-      console.error("POST /users error:", e?.response?.data ?? e);
-      const msg =
-        e?.response?.data?.message ||
-        e?.response?.data?.error ||
-        "Error al crear usuario";
+      const msg = e?.response?.data?.message ?? "Error al crear usuario";
       setError(Array.isArray(msg) ? msg.join(" | ") : msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -84,11 +111,7 @@ export default function UsersPage() {
       });
       await load();
     } catch (e: any) {
-      console.error("PATCH /users/:id error:", e?.response?.data ?? e);
-      const msg =
-        e?.response?.data?.message ||
-        e?.response?.data?.error ||
-        "Error al actualizar usuario";
+      const msg = e?.response?.data?.message ?? "Error al actualizar usuario";
       setError(Array.isArray(msg) ? msg.join(" | ") : msg);
     }
   };
@@ -106,9 +129,8 @@ export default function UsersPage() {
           <CardHeader>
             <CardTitle>Crear usuario</CardTitle>
             <CardDescription>
-              MVP: crea usuario y opcionalmente enlázalo a Teacher/Student.
-              <br />
-              Status válidos en backend: <b>active | pending | disabled</b>
+              Si el rol es <b>DOCENTE</b> y no proporcionas <b>linkedEntityId</b>, se creará automáticamente el registro
+              en <b>teachers</b> usando <b>teacherName</b> + <b>employeeNumber</b>.
             </CardDescription>
           </CardHeader>
 
@@ -119,6 +141,7 @@ export default function UsersPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="usuario@metricampus.local"
+                disabled={loading}
               />
             </div>
 
@@ -128,6 +151,7 @@ export default function UsersPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 type="password"
+                disabled={loading}
               />
             </div>
 
@@ -137,10 +161,11 @@ export default function UsersPage() {
                 className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
                 value={status}
                 onChange={(e) => setStatus(e.target.value as any)}
+                disabled={loading}
               >
                 <option value="active">active</option>
-                <option value="pending">pending</option>
                 <option value="disabled">disabled</option>
+                <option value="pending">pending</option>
               </select>
             </div>
 
@@ -150,12 +175,13 @@ export default function UsersPage() {
                 className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
+                disabled={loading}
               >
-                <option value="SUPERADMIN">SUPERADMIN</option>
-                <option value="ADMIN">ADMIN</option>
-                <option value="SERVICIOS_ESCOLARES">SERVICIOS_ESCOLARES</option>
-                <option value="DOCENTE">DOCENTE</option>
-                <option value="ALUMNO">ALUMNO</option>
+                {ROLE_OPTIONS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -164,13 +190,39 @@ export default function UsersPage() {
               <Input
                 value={linkedEntityId}
                 onChange={(e) => setLinkedEntityId(e.target.value)}
-                placeholder="Opcional: pega el _id del teacher/student"
+                placeholder="Opcional: pega el _id del teacher/student (si lo dejas vacío, DOCENTE autogenera Teacher)"
+                disabled={loading}
               />
             </div>
 
+            {/* NUEVO: campos solo para DOCENTE cuando linkedEntityId está vacío */}
+            {role === "DOCENTE" && !linkedEntityId.trim() ? (
+              <>
+                <div className="space-y-2 lg:col-span-2">
+                  <Label>Nombre del docente (teacherName)</Label>
+                  <Input
+                    value={teacherName}
+                    onChange={(e) => setTeacherName(e.target.value)}
+                    placeholder="Ej. Juan Pérez"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>No. empleado (employeeNumber)</Label>
+                  <Input
+                    value={employeeNumber}
+                    onChange={(e) => setEmployeeNumber(e.target.value)}
+                    placeholder="EMP-0001"
+                    disabled={loading}
+                  />
+                </div>
+              </>
+            ) : null}
+
             <div className="flex items-end">
-              <Button onClick={createUser} disabled={!email || !password}>
-                Crear
+              <Button onClick={createUser} disabled={loading || !email || !password}>
+                {loading ? "Creando..." : "Crear"}
               </Button>
             </div>
           </CardContent>
@@ -179,9 +231,7 @@ export default function UsersPage() {
         <Card>
           <CardHeader>
             <CardTitle>Listado</CardTitle>
-            <CardDescription>
-              {loading ? "Cargando..." : "Administra roles/status/linkedEntityId"}
-            </CardDescription>
+            <CardDescription>{loading ? "Cargando..." : "Administra roles/status/linkedEntityId"}</CardDescription>
           </CardHeader>
 
           <CardContent>
@@ -190,7 +240,7 @@ export default function UsersPage() {
                 <thead className="bg-muted/60">
                   <tr>
                     <th className="text-left p-3">Email</th>
-                    <th className="text-left p-3">Roles</th>
+                    <th className="text-left p-3">Rol</th>
                     <th className="text-left p-3">Status</th>
                     <th className="text-left p-3">linkedEntityId</th>
                     <th className="text-left p-3">Acciones</th>
@@ -198,14 +248,14 @@ export default function UsersPage() {
                 </thead>
                 <tbody>
                   {rows.map((u) => (
-                    <UserRowItem key={u._id} u={u} onSave={updateUser} />
+                    <UserRowItem key={u._id} u={u} onSave={updateUser} loading={loading} />
                   ))}
                 </tbody>
               </table>
             </div>
 
             <div className="mt-3">
-              <Button variant="secondary" onClick={load}>
+              <Button variant="secondary" onClick={load} disabled={loading}>
                 Refrescar
               </Button>
             </div>
@@ -219,9 +269,11 @@ export default function UsersPage() {
 function UserRowItem({
   u,
   onSave,
+  loading,
 }: {
   u: UserRow;
   onSave: (id: string, patch: any) => Promise<void>;
+  loading: boolean;
 }) {
   const [role, setRole] = React.useState<string>(u.roles?.[0] ?? "");
   const [status, setStatus] = React.useState<UserRow["status"]>(u.status);
@@ -236,12 +288,13 @@ function UserRowItem({
           className="h-10 rounded-md border border-border bg-input px-3 text-sm"
           value={role}
           onChange={(e) => setRole(e.target.value)}
+          disabled={loading}
         >
-          <option value="SUPERADMIN">SUPERADMIN</option>
-          <option value="ADMIN">ADMIN</option>
-          <option value="SERVICIOS_ESCOLARES">SERVICIOS_ESCOLARES</option>
-          <option value="DOCENTE">DOCENTE</option>
-          <option value="ALUMNO">ALUMNO</option>
+          {ROLE_OPTIONS.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
         </select>
       </td>
 
@@ -250,10 +303,11 @@ function UserRowItem({
           className="h-10 rounded-md border border-border bg-input px-3 text-sm"
           value={status}
           onChange={(e) => setStatus(e.target.value as any)}
+          disabled={loading}
         >
           <option value="active">active</option>
-          <option value="pending">pending</option>
           <option value="disabled">disabled</option>
+          <option value="pending">pending</option>
         </select>
       </td>
 
@@ -263,6 +317,7 @@ function UserRowItem({
           onChange={(e) => setLinkedEntityId(e.target.value)}
           placeholder="Teacher/Student _id o vacío"
           className="h-10"
+          disabled={loading}
         />
       </td>
 
@@ -275,6 +330,7 @@ function UserRowItem({
               linkedEntityId,
             })
           }
+          disabled={loading}
         >
           Guardar
         </Button>

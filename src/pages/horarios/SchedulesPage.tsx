@@ -11,7 +11,7 @@ type Period = { _id: string; name: string; isActive: boolean };
 type Career = { _id: string; code: string; name: string };
 type Group = { _id: string; name: string; semester: number; careerId?: any; periodId?: any };
 type Subject = { _id: string; code: string; name: string; semester: number };
-type Teacher = { _id: string; name: string; email?: string };
+type Teacher = { _id: string; name: string; employeeNumber?: string; status?: string };
 
 type ScheduleBlock = {
   _id: string;
@@ -31,8 +31,9 @@ const DAYS = [
   { v: 3, label: "Miércoles" },
   { v: 4, label: "Jueves" },
   { v: 5, label: "Viernes" },
-  { v: 6, label: "Sábado" },
-  { v: 7, label: "Domingo" },
+  // si NO quieres sábado/domingo en horarios oficiales, déjalos fuera:
+  // { v: 6, label: "Sábado" },
+  // { v: 7, label: "Domingo" },
 ];
 
 export default function SchedulesPage() {
@@ -55,7 +56,10 @@ export default function SchedulesPage() {
   const [blocks, setBlocks] = React.useState<ScheduleBlock[]>([]);
 
   // form crear
-  const [dayOfWeek, setDayOfWeek] = React.useState<number>(1);
+  const [daysSelected, setDaysSelected] = React.useState<Record<number, boolean>>({
+    1: true, 2: true, 3: true, 4: true, 5: true,
+  });
+
   const [startTime, setStartTime] = React.useState("08:00");
   const [endTime, setEndTime] = React.useState("09:00");
   const [room, setRoom] = React.useState("A-1");
@@ -63,15 +67,23 @@ export default function SchedulesPage() {
   const [teacherId, setTeacherId] = React.useState("");
 
   const loadBase = React.useCallback(async () => {
+    setError("");
     try {
       const [p, c, t] = await Promise.all([
         api.get("/academic/periods"),
         api.get("/academic/careers"),
-        api.get("/academic/teachers"),
+        // solo activos (opcional):
+        api.get("/academic/teachers", { params: { status: "active" } }),
       ]);
-      setPeriods(p.data ?? []);
+
+      const pData: Period[] = p.data ?? [];
+      setPeriods(pData);
       setCareers(c.data ?? []);
       setTeachers(t.data ?? []);
+
+      // Selecciona por default el periodo activo si existe
+      const active = pData.find((x) => x.isActive);
+      if (active?._id) setPeriodId(active._id);
     } catch (e: any) {
       setError(e?.response?.data?.message ?? "Error al cargar catálogos base (periodos/carreras/docentes)");
     }
@@ -144,7 +156,11 @@ export default function SchedulesPage() {
     loadBlocks();
   }, [loadBlocks]);
 
-  const createBlock = async () => {
+  const toggleDay = (v: number) => {
+    setDaysSelected((prev) => ({ ...prev, [v]: !prev[v] }));
+  };
+
+  const createBlocks = async () => {
     setError("");
     if (!periodId || !careerId || !groupId) {
       setError("Selecciona Periodo, Carrera y Grupo.");
@@ -154,20 +170,34 @@ export default function SchedulesPage() {
       setError("Selecciona Materia y Docente.");
       return;
     }
+
+    const selected = DAYS.filter((d) => !!daysSelected[d.v]).map((d) => d.v);
+    if (selected.length === 0) {
+      setError("Selecciona al menos un día.");
+      return;
+    }
+
     try {
-      await api.post("/academic/schedule-blocks", {
-        periodId,
-        groupId,
-        subjectId,
-        teacherId,
-        dayOfWeek,
-        startTime,
-        endTime,
-        room,
-      });
+      // Crea 1 bloque por día marcado
+      await Promise.all(
+        selected.map((dayOfWeek) =>
+          api.post("/academic/schedule-blocks", {
+            periodId,
+            groupId,
+            subjectId,
+            teacherId,
+            dayOfWeek,
+            startTime,
+            endTime,
+            room,
+            type: "class",
+          })
+        )
+      );
+
       await loadBlocks();
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? "Error al crear bloque de horario (posible choque)");
+      setError(e?.response?.data?.message ?? "Error al crear bloques de horario (posible choque)");
     }
   };
 
@@ -247,27 +277,25 @@ export default function SchedulesPage() {
           </CardContent>
         </Card>
 
-        {/* Crear bloque */}
+        {/* Crear bloques */}
         <Card>
           <CardHeader>
-            <CardTitle>Crear bloque</CardTitle>
-            <CardDescription>Agrega una clase al horario del grupo seleccionado.</CardDescription>
+            <CardTitle>Crear clase</CardTitle>
+            <CardDescription>
+              Marca los días (Lun-Vie), hora, materia, docente y aula. Se crea un bloque por cada día seleccionado.
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 lg:grid-cols-3">
-            <div className="space-y-2">
-              <Label>Día</Label>
-              <select
-                className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
-                value={dayOfWeek}
-                onChange={(e) => setDayOfWeek(Number(e.target.value))}
-                disabled={!groupId}
-              >
+            <div className="space-y-2 lg:col-span-3">
+              <Label>Días</Label>
+              <div className="flex flex-wrap gap-3">
                 {DAYS.map((d) => (
-                  <option key={d.v} value={d.v}>
+                  <label key={d.v} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={!!daysSelected[d.v]} onChange={() => toggleDay(d.v)} />
                     {d.label}
-                  </option>
+                  </label>
                 ))}
-              </select>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -278,6 +306,11 @@ export default function SchedulesPage() {
             <div className="space-y-2">
               <Label>Hora fin</Label>
               <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} disabled={!groupId} />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Aula</Label>
+              <Input value={room} onChange={(e) => setRoom(e.target.value)} disabled={!groupId} placeholder="A-12" />
             </div>
 
             <div className="space-y-2 lg:col-span-2">
@@ -298,11 +331,6 @@ export default function SchedulesPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Aula</Label>
-              <Input value={room} onChange={(e) => setRoom(e.target.value)} disabled={!groupId} placeholder="A-12" />
-            </div>
-
-            <div className="space-y-2 lg:col-span-2">
               <Label>Docente</Label>
               <select
                 className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
@@ -313,14 +341,14 @@ export default function SchedulesPage() {
                 <option value="">Selecciona...</option>
                 {teachers.map((t) => (
                   <option key={t._id} value={t._id}>
-                    {t.name}{t.email ? ` (${t.email})` : ""}
+                    {t.name}{t.employeeNumber ? ` (${t.employeeNumber})` : ""}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="flex items-end">
-              <Button onClick={createBlock} disabled={!groupId}>
+              <Button onClick={createBlocks} disabled={!groupId}>
                 Agregar
               </Button>
             </div>
