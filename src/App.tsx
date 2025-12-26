@@ -11,6 +11,15 @@ import SchedulesPage from "./pages/horarios/SchedulesPage";
 import TeacherSchedulePage from "./pages/docente/HorarioDocente";
 import StudentSchedulePage from "./pages/alumno/HorarioAlumno";
 import UsersPage from "./pages/admin/UsersPage";
+import ClassAssignmentsPage from "./pages/catalogos/ClassAssignmentsPage";
+import ClassAssignmentsPage1 from "./pages/horarios/ClassAssignmentsPage";
+import StudentsPage from "./pages/catalogos/StudentsPage";
+import RegisterStudentPage from "./pages/RegisterStudentPage";
+import ChangePasswordPage from "./pages/ChangePasswordPage";
+import CourseEnrollmentsPage from "./pages/catalogos/CourseEnrollmentsPage";
+import MisCargasDocente from "./pages/docente/MisCargasDocente";
+import GroupLoadsSummaryPage from "./pages/catalogos/GroupLoadsSummaryPage";
+import MisMateriasAlumno from "./pages/alumno/MisMateriasAlumno";
 
 
 function SimpleHome({ title }: { title: string }) {
@@ -163,6 +172,15 @@ export default function App() {
         }
       />
       <Route
+      path="/docente/cargas"
+      element={
+        <RequireRole allow={["docente"]}>
+          <MisCargasDocente />
+        </RequireRole>
+      }
+    />
+
+      <Route
         path="/dashboard/usuarios"
         element={
           <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
@@ -170,7 +188,65 @@ export default function App() {
           </RequireRole>
         }
       />
+      <Route
+        path="/catalogos/inscripciones"
+        element={
+          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
+            <CourseEnrollmentsPage/>
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/catalogos/cargas"
+        element={
+          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
+            <ClassAssignmentsPage />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/horarios/cargas"
+        element={
+          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
+            <ClassAssignmentsPage1 />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/catalogos/resumen-grupo"
+        element={
+          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
+            <GroupLoadsSummaryPage />
+          </RequireRole>
+        }
+      />
 
+      <Route path="/register" element={<RegisterStudentPage />} />
+      <Route
+        path="/catalogos/alumnos"
+        element={
+          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
+            <StudentsPage />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/estudiante/materias"
+        element={
+          <RequireRole allow={["estudiante"]}>
+            <MisMateriasAlumno />
+          </RequireRole>
+        }
+      />
+
+      <Route
+        path="/mi-cuenta/password"
+        element={
+          <RequireAuth>
+            <ChangePasswordPage />
+          </RequireAuth>
+        }
+      />
 
       {/* Genéricos */}
       <Route path="/dashboard" element={<RequireAuth><Navigate to="/dashboard/admin" replace /></RequireAuth>} />

@@ -7,21 +7,15 @@ import { Input } from "../../components/input";
 import { Label } from "../../components/label";
 import { Alert, AlertDescription } from "../../components/alert";
 
+type UserStatus = "active" | "inactive" | "pending";
+
 type UserRow = {
   _id: string;
   email: string;
   roles: string[];
-  status: "active" | "disabled" | "pending";
+  status: UserStatus;
   linkedEntityId?: string | null;
 };
-
-const ROLE_OPTIONS = [
-  "SUPERADMIN",
-  "ADMIN",
-  "SERVICIOS_ESCOLARES",
-  "DOCENTE",
-  "ALUMNO",
-];
 
 export default function UsersPage() {
   const [rows, setRows] = React.useState<UserRow[]>([]);
@@ -32,12 +26,15 @@ export default function UsersPage() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [role, setRole] = React.useState("DOCENTE");
-  const [status, setStatus] = React.useState<UserRow["status"]>("active");
+  const [status, setStatus] = React.useState<UserStatus>("active");
   const [linkedEntityId, setLinkedEntityId] = React.useState("");
 
-  // NUEVO: para autocrear teacher cuando role=DOCENTE y NO se provee linkedEntityId
+  // campos para auto-crear docente (si el backend los soporta en CreateUserDto)
   const [teacherName, setTeacherName] = React.useState("");
   const [employeeNumber, setEmployeeNumber] = React.useState("");
+
+  const isDocente = role === "DOCENTE";
+  const willAutoCreateTeacher = isDocente && !linkedEntityId.trim();
 
   const load = React.useCallback(async () => {
     setError("");
@@ -46,7 +43,8 @@ export default function UsersPage() {
       const res = await api.get("/users");
       setRows(res.data ?? []);
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? "Error al cargar usuarios");
+      const msg = e?.response?.data?.message ?? "Error al cargar usuarios";
+      setError(Array.isArray(msg) ? msg.join(" | ") : msg);
     } finally {
       setLoading(false);
     }
@@ -59,38 +57,41 @@ export default function UsersPage() {
   const createUser = async () => {
     setError("");
 
-    // Validaciones mínimas del lado del front
     if (!email.trim()) return setError("Email requerido");
     if (!password.trim()) return setError("Password requerido");
 
-    const isDocenteAuto = role === "DOCENTE" && !linkedEntityId.trim();
-
-    if (isDocenteAuto) {
-      if (!teacherName.trim()) return setError("Nombre del docente requerido (teacherName)");
-      if (!employeeNumber.trim()) return setError("No. empleado requerido (employeeNumber)");
+    if (willAutoCreateTeacher) {
+      if (!teacherName.trim() || teacherName.trim().length < 3) {
+        return setError("teacherName requerido (mínimo 3 caracteres) para auto-crear docente");
+      }
+      if (!employeeNumber.trim()) {
+        return setError("employeeNumber requerido para auto-crear docente");
+      }
     }
 
+    setLoading(true);
     try {
-      setLoading(true);
-
-      await api.post("/users", {
+      const payload: any = {
         email: email.trim(),
         password,
         roles: [role],
         status,
-        linkedEntityId: linkedEntityId.trim() || undefined,
+        linkedEntityId: linkedEntityId.trim() ? linkedEntityId.trim() : null,
+      };
 
-        // SOLO cuando sea DOCENTE y no mandes linkedEntityId:
-        ...(isDocenteAuto
-          ? { teacherName: teacherName.trim(), employeeNumber: employeeNumber.trim() }
-          : {}),
-      });
+      if (willAutoCreateTeacher) {
+        payload.teacherName = teacherName.trim();
+        payload.employeeNumber = employeeNumber.trim();
+      }
+
+      await api.post("/users", payload);
 
       setEmail("");
       setPassword("");
       setLinkedEntityId("");
       setTeacherName("");
       setEmployeeNumber("");
+
       await load();
     } catch (e: any) {
       const msg = e?.response?.data?.message ?? "Error al crear usuario";
@@ -102,6 +103,7 @@ export default function UsersPage() {
 
   const updateUser = async (id: string, patch: Partial<UserRow> & { password?: string | null }) => {
     setError("");
+    setLoading(true);
     try {
       await api.patch(`/users/${id}`, {
         roles: patch.roles,
@@ -113,6 +115,8 @@ export default function UsersPage() {
     } catch (e: any) {
       const msg = e?.response?.data?.message ?? "Error al actualizar usuario";
       setError(Array.isArray(msg) ? msg.join(" | ") : msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -129,8 +133,7 @@ export default function UsersPage() {
           <CardHeader>
             <CardTitle>Crear usuario</CardTitle>
             <CardDescription>
-              Si el rol es <b>DOCENTE</b> y no proporcionas <b>linkedEntityId</b>, se creará automáticamente el registro
-              en <b>teachers</b> usando <b>teacherName</b> + <b>employeeNumber</b>.
+              Crea usuarios. Si el rol es DOCENTE y no proporcionas linkedEntityId, el backend puede auto-crear un Teacher.
             </CardDescription>
           </CardHeader>
 
@@ -160,11 +163,11 @@ export default function UsersPage() {
               <select
                 className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
                 value={status}
-                onChange={(e) => setStatus(e.target.value as any)}
+                onChange={(e) => setStatus(e.target.value as UserStatus)}
                 disabled={loading}
               >
                 <option value="active">active</option>
-                <option value="disabled">disabled</option>
+                <option value="inactive">inactive</option>
                 <option value="pending">pending</option>
               </select>
             </div>
@@ -177,11 +180,11 @@ export default function UsersPage() {
                 onChange={(e) => setRole(e.target.value)}
                 disabled={loading}
               >
-                {ROLE_OPTIONS.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
+                <option value="SUPERADMIN">SUPERADMIN</option>
+                <option value="ADMIN">ADMIN</option>
+                <option value="SERVICIOS_ESCOLARES">SERVICIOS_ESCOLARES</option>
+                <option value="DOCENTE">DOCENTE</option>
+                <option value="ALUMNO">ALUMNO</option>
               </select>
             </div>
 
@@ -190,35 +193,42 @@ export default function UsersPage() {
               <Input
                 value={linkedEntityId}
                 onChange={(e) => setLinkedEntityId(e.target.value)}
-                placeholder="Opcional: pega el _id del teacher/student (si lo dejas vacío, DOCENTE autogenera Teacher)"
+                placeholder="Opcional: pega el _id del teacher/student (si lo dejas vacío y es DOCENTE, auto-crea Teacher)"
                 disabled={loading}
               />
             </div>
 
-            {/* NUEVO: campos solo para DOCENTE cuando linkedEntityId está vacío */}
-            {role === "DOCENTE" && !linkedEntityId.trim() ? (
+            {isDocente && (
               <>
                 <div className="space-y-2 lg:col-span-2">
-                  <Label>Nombre del docente (teacherName)</Label>
+                  <Label>teacherName (para auto-crear Teacher)</Label>
                   <Input
                     value={teacherName}
                     onChange={(e) => setTeacherName(e.target.value)}
-                    placeholder="Ej. Juan Pérez"
-                    disabled={loading}
+                    placeholder="Nombre completo del docente"
+                    disabled={loading || !willAutoCreateTeacher}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>No. empleado (employeeNumber)</Label>
+                  <Label>employeeNumber (para auto-crear Teacher)</Label>
                   <Input
                     value={employeeNumber}
                     onChange={(e) => setEmployeeNumber(e.target.value)}
-                    placeholder="EMP-0001"
-                    disabled={loading}
+                    placeholder="No. empleado"
+                    disabled={loading || !willAutoCreateTeacher}
                   />
                 </div>
+
+                <div className="flex items-end">
+                  <div className="text-xs text-muted-foreground">
+                    {willAutoCreateTeacher
+                      ? "Se creará un Teacher automáticamente al guardar."
+                      : "Si proporcionas linkedEntityId, no se auto-crea Teacher."}
+                  </div>
+                </div>
               </>
-            ) : null}
+            )}
 
             <div className="flex items-end">
               <Button onClick={createUser} disabled={loading || !email || !password}>
@@ -248,7 +258,7 @@ export default function UsersPage() {
                 </thead>
                 <tbody>
                   {rows.map((u) => (
-                    <UserRowItem key={u._id} u={u} onSave={updateUser} loading={loading} />
+                    <UserRowItem key={u._id} u={u} onSave={updateUser} />
                   ))}
                 </tbody>
               </table>
@@ -269,14 +279,12 @@ export default function UsersPage() {
 function UserRowItem({
   u,
   onSave,
-  loading,
 }: {
   u: UserRow;
   onSave: (id: string, patch: any) => Promise<void>;
-  loading: boolean;
 }) {
   const [role, setRole] = React.useState<string>(u.roles?.[0] ?? "");
-  const [status, setStatus] = React.useState<UserRow["status"]>(u.status);
+  const [status, setStatus] = React.useState<UserStatus>(u.status);
   const [linkedEntityId, setLinkedEntityId] = React.useState<string>(u.linkedEntityId ?? "");
 
   return (
@@ -288,13 +296,12 @@ function UserRowItem({
           className="h-10 rounded-md border border-border bg-input px-3 text-sm"
           value={role}
           onChange={(e) => setRole(e.target.value)}
-          disabled={loading}
         >
-          {ROLE_OPTIONS.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
+          <option value="SUPERADMIN">SUPERADMIN</option>
+          <option value="ADMIN">ADMIN</option>
+          <option value="SERVICIOS_ESCOLARES">SERVICIOS_ESCOLARES</option>
+          <option value="DOCENTE">DOCENTE</option>
+          <option value="ALUMNO">ALUMNO</option>
         </select>
       </td>
 
@@ -302,11 +309,10 @@ function UserRowItem({
         <select
           className="h-10 rounded-md border border-border bg-input px-3 text-sm"
           value={status}
-          onChange={(e) => setStatus(e.target.value as any)}
-          disabled={loading}
+          onChange={(e) => setStatus(e.target.value as UserStatus)}
         >
           <option value="active">active</option>
-          <option value="disabled">disabled</option>
+          <option value="inactive">inactive</option>
           <option value="pending">pending</option>
         </select>
       </td>
@@ -317,7 +323,6 @@ function UserRowItem({
           onChange={(e) => setLinkedEntityId(e.target.value)}
           placeholder="Teacher/Student _id o vacío"
           className="h-10"
-          disabled={loading}
         />
       </td>
 
@@ -330,7 +335,6 @@ function UserRowItem({
               linkedEntityId,
             })
           }
-          disabled={loading}
         >
           Guardar
         </Button>

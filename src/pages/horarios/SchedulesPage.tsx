@@ -5,24 +5,30 @@ import { Button } from "../../components/button";
 import { Input } from "../../components/input";
 import { Label } from "../../components/label";
 import { Alert, AlertDescription } from "../../components/alert";
+import { Checkbox } from "../../components/checkbox";
 import { api } from "../../api/client";
 
 type Period = { _id: string; name: string; isActive: boolean };
 type Career = { _id: string; code: string; name: string };
-type Group = { _id: string; name: string; semester: number; careerId?: any; periodId?: any };
-type Subject = { _id: string; code: string; name: string; semester: number };
-type Teacher = { _id: string; name: string; employeeNumber?: string; status?: string };
+type Group = { _id: string; name: string; semester: number };
+
+type ClassAssignment = {
+  _id: string;
+  status: "active" | "inactive";
+  subjectId?: any;
+  teacherId?: any;
+};
 
 type ScheduleBlock = {
   _id: string;
+  type: "class" | "extracurricular";
   dayOfWeek: number; // 1-7
   startTime: string; // "08:00"
   endTime: string;
   room?: string;
-  periodId?: any;
-  groupId?: any;
   subjectId?: any;
   teacherId?: any;
+  groupId?: any;
 };
 
 const DAYS = [
@@ -31,61 +37,48 @@ const DAYS = [
   { v: 3, label: "Miércoles" },
   { v: 4, label: "Jueves" },
   { v: 5, label: "Viernes" },
-  // si NO quieres sábado/domingo en horarios oficiales, déjalos fuera:
-  // { v: 6, label: "Sábado" },
-  // { v: 7, label: "Domingo" },
+  { v: 6, label: "Sábado" },
+  { v: 7, label: "Domingo" },
 ];
 
 export default function SchedulesPage() {
   const [error, setError] = React.useState("");
   const [loading, setLoading] = React.useState(false);
 
-  // combos
   const [periods, setPeriods] = React.useState<Period[]>([]);
   const [careers, setCareers] = React.useState<Career[]>([]);
   const [groups, setGroups] = React.useState<Group[]>([]);
-  const [subjects, setSubjects] = React.useState<Subject[]>([]);
-  const [teachers, setTeachers] = React.useState<Teacher[]>([]);
 
   // filtros principales
   const [periodId, setPeriodId] = React.useState("");
   const [careerId, setCareerId] = React.useState("");
   const [groupId, setGroupId] = React.useState("");
 
-  // listado
+  // cargas disponibles para ese grupo/periodo
+  const [assignments, setAssignments] = React.useState<ClassAssignment[]>([]);
+  const [assignmentId, setAssignmentId] = React.useState("");
+
+  // listado bloques
   const [blocks, setBlocks] = React.useState<ScheduleBlock[]>([]);
 
-  // form crear
-  const [daysSelected, setDaysSelected] = React.useState<Record<number, boolean>>({
-    1: true, 2: true, 3: true, 4: true, 5: true,
-  });
-
+  // form
+  const [daysSelected, setDaysSelected] = React.useState<number[]>([1, 2, 3, 4, 5]);
   const [startTime, setStartTime] = React.useState("08:00");
   const [endTime, setEndTime] = React.useState("09:00");
   const [room, setRoom] = React.useState("A-1");
-  const [subjectId, setSubjectId] = React.useState("");
-  const [teacherId, setTeacherId] = React.useState("");
 
   const loadBase = React.useCallback(async () => {
     setError("");
     try {
-      const [p, c, t] = await Promise.all([
-        api.get("/academic/periods"),
-        api.get("/academic/careers"),
-        // solo activos (opcional):
-        api.get("/academic/teachers", { params: { status: "active" } }),
-      ]);
-
-      const pData: Period[] = p.data ?? [];
-      setPeriods(pData);
+      const [p, c] = await Promise.all([api.get("/academic/periods"), api.get("/academic/careers")]);
+      const pList: Period[] = p.data ?? [];
+      setPeriods(pList);
       setCareers(c.data ?? []);
-      setTeachers(t.data ?? []);
 
-      // Selecciona por default el periodo activo si existe
-      const active = pData.find((x) => x.isActive);
-      if (active?._id) setPeriodId(active._id);
+      const active = pList.find((x) => x.isActive);
+      if (active) setPeriodId(active._id);
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? "Error al cargar catálogos base (periodos/carreras/docentes)");
+      setError(e?.response?.data?.message ?? "Error al cargar catálogos base (periodos/carreras)");
     }
   }, []);
 
@@ -93,13 +86,16 @@ export default function SchedulesPage() {
     loadBase();
   }, [loadBase]);
 
-  // cargar grupos cuando cambian periodo/carrera
+  // grupos cuando cambia periodo/carrera
   React.useEffect(() => {
     (async () => {
       setError("");
       setGroups([]);
       setGroupId("");
+      setAssignments([]);
+      setAssignmentId("");
       setBlocks([]);
+
       if (!periodId || !careerId) return;
 
       try {
@@ -111,27 +107,28 @@ export default function SchedulesPage() {
     })();
   }, [periodId, careerId]);
 
-  // cargar subjects cuando cambian carrera o grupo (para usar semestre)
+  // cargar cargas cuando cambia grupo/periodo
   React.useEffect(() => {
     (async () => {
       setError("");
-      setSubjects([]);
-      setSubjectId("");
+      setAssignments([]);
+      setAssignmentId("");
 
-      if (!careerId) return;
-
-      const sem = groups.find((g) => g._id === groupId)?.semester;
+      if (!periodId || !groupId) return;
 
       try {
-        const res = await api.get("/academic/subjects", {
-          params: { careerId, ...(sem ? { semester: sem } : {}) },
+        const res = await api.get("/academic/class-assignments", {
+          params: { periodId, groupId, status: "active" },
         });
-        setSubjects(res.data ?? []);
+        const list: ClassAssignment[] = res.data ?? [];
+        setAssignments(list);
+
+        if (list.length > 0) setAssignmentId(list[0]._id);
       } catch (e: any) {
-        setError(e?.response?.data?.message ?? "Error al cargar materias");
+        setError(e?.response?.data?.message ?? "Error al cargar cargas (class-assignments)");
       }
     })();
-  }, [careerId, groupId, groups]);
+  }, [periodId, groupId]);
 
   const loadBlocks = React.useCallback(async () => {
     setError("");
@@ -141,9 +138,7 @@ export default function SchedulesPage() {
         setBlocks([]);
         return;
       }
-      const res = await api.get("/academic/schedule-blocks", {
-        params: { periodId, groupId },
-      });
+      const res = await api.get("/academic/schedule-blocks", { params: { periodId, groupId } });
       setBlocks(res.data ?? []);
     } catch (e: any) {
       setError(e?.response?.data?.message ?? "Error al cargar horario del grupo");
@@ -156,48 +151,58 @@ export default function SchedulesPage() {
     loadBlocks();
   }, [loadBlocks]);
 
-  const toggleDay = (v: number) => {
-    setDaysSelected((prev) => ({ ...prev, [v]: !prev[v] }));
+  const toggleDay = (d: number, checked: boolean) => {
+    setDaysSelected((prev) => {
+      const set = new Set(prev);
+      if (checked) set.add(d);
+      else set.delete(d);
+      return Array.from(set).sort((a, b) => a - b);
+    });
   };
 
   const createBlocks = async () => {
     setError("");
+
     if (!periodId || !careerId || !groupId) {
       setError("Selecciona Periodo, Carrera y Grupo.");
       return;
     }
-    if (!subjectId || !teacherId) {
-      setError("Selecciona Materia y Docente.");
+    if (!assignmentId) {
+      setError("No hay cargas activas para este grupo. Ve a 'Cargas' y crea al menos una.");
       return;
     }
-
-    const selected = DAYS.filter((d) => !!daysSelected[d.v]).map((d) => d.v);
-    if (selected.length === 0) {
+    if (daysSelected.length === 0) {
       setError("Selecciona al menos un día.");
       return;
     }
 
-    try {
-      // Crea 1 bloque por día marcado
-      await Promise.all(
-        selected.map((dayOfWeek) =>
-          api.post("/academic/schedule-blocks", {
-            periodId,
-            groupId,
-            subjectId,
-            teacherId,
-            dayOfWeek,
-            startTime,
-            endTime,
-            room,
-            type: "class",
-          })
-        )
-      );
+    const ass = assignments.find((a) => a._id === assignmentId);
+    const subjectId = ass?.subjectId?._id ?? ass?.subjectId;
+    const teacherId = ass?.teacherId?._id ?? ass?.teacherId;
 
+    if (!subjectId || !teacherId) {
+      setError("La carga seleccionada no tiene subjectId/teacherId válidos.");
+      return;
+    }
+
+    try {
+      // crea un bloque por cada día seleccionado
+      for (const dayOfWeek of daysSelected) {
+        await api.post("/academic/schedule-blocks", {
+          periodId,
+          type: "class",
+          groupId,
+          subjectId,
+          teacherId,
+          dayOfWeek,
+          startTime,
+          endTime,
+          room,
+        });
+      }
       await loadBlocks();
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? "Error al crear bloques de horario (posible choque)");
+      setError(e?.response?.data?.message ?? "Error al crear bloque(s) (posible choque)");
     }
   };
 
@@ -211,7 +216,7 @@ export default function SchedulesPage() {
   }, [blocks]);
 
   return (
-    <DashboardLayout title="Horarios">
+    <DashboardLayout title="Horarios (Admin)">
       <div className="space-y-6">
         {error && (
           <Alert variant="destructive">
@@ -222,7 +227,7 @@ export default function SchedulesPage() {
         {/* Selectores principales */}
         <Card>
           <CardHeader>
-            <CardTitle>Selecciona contexto</CardTitle>
+            <CardTitle>Contexto</CardTitle>
             <CardDescription>Elige periodo, carrera y grupo para administrar el horario.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 lg:grid-cols-3">
@@ -236,7 +241,8 @@ export default function SchedulesPage() {
                 <option value="">Selecciona...</option>
                 {periods.map((p) => (
                   <option key={p._id} value={p._id}>
-                    {p.name}{p.isActive ? " (Activo)" : ""}
+                    {p.name}
+                    {p.isActive ? " (Activo)" : ""}
                   </option>
                 ))}
               </select>
@@ -266,7 +272,9 @@ export default function SchedulesPage() {
                 onChange={(e) => setGroupId(e.target.value)}
                 disabled={!periodId || !careerId}
               >
-                <option value="">{!periodId || !careerId ? "Selecciona periodo y carrera..." : "Selecciona..."}</option>
+                <option value="">
+                  {!periodId || !careerId ? "Selecciona periodo y carrera..." : "Selecciona..."}
+                </option>
                 {groups.map((g) => (
                   <option key={g._id} value={g._id}>
                     {g.name} (Sem {g.semester})
@@ -280,19 +288,43 @@ export default function SchedulesPage() {
         {/* Crear bloques */}
         <Card>
           <CardHeader>
-            <CardTitle>Crear clase</CardTitle>
+            <CardTitle>Agregar clase</CardTitle>
             <CardDescription>
-              Marca los días (Lun-Vie), hora, materia, docente y aula. Se crea un bloque por cada día seleccionado.
+              Selecciona una carga (Materia+Docente) y define días/horas. Se creará un bloque por cada día marcado.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 lg:grid-cols-3">
             <div className="space-y-2 lg:col-span-3">
+              <Label>Carga (Materia + Docente)</Label>
+              <select
+                className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
+                value={assignmentId}
+                onChange={(e) => setAssignmentId(e.target.value)}
+                disabled={!groupId}
+              >
+                {assignments.length === 0 ? (
+                  <option value="">Sin cargas activas (ve a Cargas)</option>
+                ) : null}
+                {assignments.map((a) => (
+                  <option key={a._id} value={a._id}>
+                    {(a.subjectId?.code ? `${a.subjectId.code} - ` : "") + (a.subjectId?.name ?? "Materia")} ·{" "}
+                    {a.teacherId?.name ?? "Docente"}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2 lg:col-span-3">
               <Label>Días</Label>
-              <div className="flex flex-wrap gap-3">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
                 {DAYS.map((d) => (
-                  <label key={d.v} className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={!!daysSelected[d.v]} onChange={() => toggleDay(d.v)} />
-                    {d.label}
+                  <label key={d.v} className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2">
+                    <Checkbox
+                      checked={daysSelected.includes(d.v)}
+                      onCheckedChange={(v) => toggleDay(d.v, Boolean(v))}
+                      disabled={!groupId}
+                    />
+                    <span className="text-sm">{d.label}</span>
                   </label>
                 ))}
               </div>
@@ -313,43 +345,9 @@ export default function SchedulesPage() {
               <Input value={room} onChange={(e) => setRoom(e.target.value)} disabled={!groupId} placeholder="A-12" />
             </div>
 
-            <div className="space-y-2 lg:col-span-2">
-              <Label>Materia</Label>
-              <select
-                className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
-                value={subjectId}
-                onChange={(e) => setSubjectId(e.target.value)}
-                disabled={!groupId}
-              >
-                <option value="">Selecciona...</option>
-                {subjects.map((s) => (
-                  <option key={s._id} value={s._id}>
-                    {s.code} - {s.name} (Sem {s.semester})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Docente</Label>
-              <select
-                className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
-                value={teacherId}
-                onChange={(e) => setTeacherId(e.target.value)}
-                disabled={!groupId}
-              >
-                <option value="">Selecciona...</option>
-                {teachers.map((t) => (
-                  <option key={t._id} value={t._id}>
-                    {t.name}{t.employeeNumber ? ` (${t.employeeNumber})` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             <div className="flex items-end">
-              <Button onClick={createBlocks} disabled={!groupId}>
-                Agregar
+              <Button onClick={createBlocks} disabled={!groupId || !assignmentId}>
+                Agregar bloque(s)
               </Button>
             </div>
           </CardContent>
@@ -359,7 +357,7 @@ export default function SchedulesPage() {
         <Card>
           <CardHeader>
             <CardTitle>Horario del grupo</CardTitle>
-            <CardDescription>{loading ? "Cargando..." : "Listado de bloques ordenados por día y hora"}</CardDescription>
+            <CardDescription>{loading ? "Cargando..." : "Bloques ordenados por día y hora"}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="overflow-auto border border-border rounded-lg">

@@ -9,12 +9,20 @@ type NavItem = {
   to: string;
   roles: AppRole[];
 };
+const ALL_ROLES: AppRole[] = ["superadmin","admin","docente","estudiante","jefe_departamento","tutor","control_escolar","capacitacion"];
 
 const NAV: NavItem[] = [
   // Home por rol
+  { label: "Catálogo: Alumnos", to: "/catalogos/alumnos", roles: ["superadmin", "admin", "control_escolar"] },
+  { label: "Mis cargas (Docente)", to: "/docente/cargas", roles: ["docente"] },
+  { label: "Cambiar contraseña", to: "/mi-cuenta/password", roles: ALL_ROLES },
+  { label: "Grupo → Cargas → Inscritos", to: "/catalogos/resumen-grupo", roles: ["superadmin", "admin", "control_escolar"] },
+  { label: "Mis materias (Estudiante)", to: "/estudiante/materias", roles: ["estudiante"] },
   { label: "Inicio (Superadmin)", to: "/dashboard/superadmin", roles: ["superadmin"] },
   { label: "Inicio (Admin)", to: "/dashboard/admin", roles: ["admin"] },
   { label: "Inicio (Control Escolar)", to: "/control-escolar", roles: ["control_escolar"] },
+  { label: "Inscripciones por materia", to: "/catalogos/inscripciones", roles: ["superadmin", "admin", "control_escolar"] },
+  { label: "Cargas", to: "/catalogos/cargas", roles: ["superadmin", "admin", "control_escolar"] },
   { label: "Inicio (Docente)", to: "/docente", roles: ["docente"] },
   { label: "Inicio (Estudiante)", to: "/estudiante", roles: ["estudiante"] },
   { label: "Horarios", to: "/horarios", roles: ["superadmin", "admin", "control_escolar"] },
@@ -23,7 +31,9 @@ const NAV: NavItem[] = [
   { label: "Catálogo: Grupos", to: "/catalogos/grupos", roles: ["superadmin", "admin", "control_escolar"] },
   { label: "Catálogo: Materias", to: "/catalogos/materias", roles: ["superadmin", "admin", "control_escolar"] },
   { label: "Usuarios", to: "/dashboard/usuarios", roles: ["superadmin", "admin", "control_escolar"] },
-
+  { label: "Cargas (Grupo-Materia-Docente)", to: "/horarios/cargas", roles: ["superadmin", "admin", "control_escolar"] },
+  { label: "Mi horario (Docente)", to: "/docente/horario", roles: ["docente"] },
+  { label: "Mi horario (Estudiante)", to: "/estudiante/horario", roles: ["estudiante"] },
 ];
 
 function RoleBadge({ role }: { role: string }) {
