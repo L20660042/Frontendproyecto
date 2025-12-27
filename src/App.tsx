@@ -20,6 +20,7 @@ import CourseEnrollmentsPage from "./pages/catalogos/CourseEnrollmentsPage";
 import MisCargasDocente from "./pages/docente/MisCargasDocente";
 import GroupLoadsSummaryPage from "./pages/catalogos/GroupLoadsSummaryPage";
 import MisMateriasAlumno from "./pages/alumno/MisMateriasAlumno";
+import ImportacionCsvPage from "./pages/catalogos/ImportacionCsvPage";
 
 
 function SimpleHome({ title }: { title: string }) {
@@ -235,6 +236,14 @@ export default function App() {
         element={
           <RequireRole allow={["estudiante"]}>
             <MisMateriasAlumno />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/catalogos/importacion"
+        element={
+          <RequireRole allow={["superadmin", "admin", "control_escolar",]}>
+            <ImportacionCsvPage />
           </RequireRole>
         }
       />

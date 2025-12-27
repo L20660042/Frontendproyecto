@@ -24,6 +24,18 @@ type ClassAssignment = {
   createdAt: string;
 };
 
+type BulkEnrollResult = {
+  ok: boolean;
+  studentsSource: "enrollments" | "students";
+  periodId: string;
+  groupId: string;
+  students: number;
+  classAssignments: number;
+  attempted: number;
+  upserted: number;
+  matched: number;
+  modified: number;
+};
 
 export default function ClassAssignmentsPage() {
   const [error, setError] = React.useState("");
@@ -49,6 +61,11 @@ export default function ClassAssignmentsPage() {
   // listado
   const [rows, setRows] = React.useState<ClassAssignment[]>([]);
   const [q, setQ] = React.useState("");
+
+  // ✅ bulk enroll UI state
+  const [bulkLoading, setBulkLoading] = React.useState(false);
+  const [bulkError, setBulkError] = React.useState("");
+  const [bulkResult, setBulkResult] = React.useState<BulkEnrollResult | null>(null);
 
   const loadBase = React.useCallback(async () => {
     setError("");
@@ -83,6 +100,8 @@ export default function ClassAssignmentsPage() {
       setRows([]);
       setSubjects([]);
       setSubjectId("");
+      setBulkResult(null);
+      setBulkError("");
       if (!periodId || !careerId) return;
 
       setError("");
@@ -175,6 +194,37 @@ export default function ClassAssignmentsPage() {
     }
   };
 
+  const bulkEnrollGroup = async () => {
+    setBulkError("");
+    setBulkResult(null);
+
+    if (!periodId || !groupId) {
+      setBulkError("Selecciona Periodo y Grupo para inscribir.");
+      return;
+    }
+
+    if (rows.length === 0) {
+      setBulkError("No hay cargas activas para este grupo. Primero crea las cargas (materias con docente).");
+      return;
+    }
+
+    setBulkLoading(true);
+    try {
+      const res = await api.post("/academic/course-enrollments/bulk/by-group", {
+        periodId,
+        groupId,
+        status: "active",
+      });
+
+      setBulkResult(res.data as BulkEnrollResult);
+    } catch (e: any) {
+      const msg = e?.response?.data?.message ?? "Error al hacer inscripción masiva (course-enrollments)";
+      setBulkError(Array.isArray(msg) ? msg.join(" | ") : msg);
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   const filtered = React.useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return rows;
@@ -210,7 +260,8 @@ export default function ClassAssignmentsPage() {
                 <option value="">Selecciona...</option>
                 {periods.map((p) => (
                   <option key={p._id} value={p._id}>
-                    {p.name}{p.isActive ? " (Activo)" : ""}
+                    {p.name}
+                    {p.isActive ? " (Activo)" : ""}
                   </option>
                 ))}
               </select>
@@ -226,7 +277,8 @@ export default function ClassAssignmentsPage() {
                 <option value="">Selecciona...</option>
                 {careers.map((c) => (
                   <option key={c._id} value={c._id}>
-                    {c.code ? `${c.code} - ` : ""}{c.name}
+                    {c.code ? `${c.code} - ` : ""}
+                    {c.name}
                   </option>
                 ))}
               </select>
@@ -240,13 +292,63 @@ export default function ClassAssignmentsPage() {
                 onChange={(e) => setGroupId(e.target.value)}
                 disabled={!periodId || !careerId}
               >
-                <option value="">{!periodId || !careerId ? "Selecciona periodo y carrera..." : "Selecciona..."}</option>
+                <option value="">
+                  {!periodId || !careerId ? "Selecciona periodo y carrera..." : "Selecciona..."}
+                </option>
                 {groups.map((g) => (
                   <option key={g._id} value={g._id}>
                     {g.name} (Sem {g.semester})
                   </option>
                 ))}
               </select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ✅ NUEVO: Inscripción masiva */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Inscripción masiva (Grupo → Todas las cargas)</CardTitle>
+            <CardDescription>
+              Esto crea los <b>CourseEnrollments</b> necesarios para que el alumno vea su horario y “mis materias”.
+              Primero intenta usar inscripciones del periodo (Enrollments). Si no existen, usa Student.groupId.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {bulkError ? (
+              <Alert variant="destructive">
+                <AlertDescription>{bulkError}</AlertDescription>
+              </Alert>
+            ) : null}
+
+            {bulkResult ? (
+              <Alert>
+                <AlertDescription>
+                  <div className="space-y-1">
+                    <div><b>Fuente alumnos:</b> {bulkResult.studentsSource}</div>
+                    <div><b>Alumnos:</b> {bulkResult.students}</div>
+                    <div><b>Cargas:</b> {bulkResult.classAssignments}</div>
+                    <div><b>Operaciones:</b> {bulkResult.attempted}</div>
+                    <div><b>Nuevas (upserted):</b> {bulkResult.upserted}</div>
+                    <div><b>Ya existían (matched):</b> {bulkResult.matched}</div>
+                    <div><b>Modificadas:</b> {bulkResult.modified}</div>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={bulkEnrollGroup} disabled={!periodId || !groupId || bulkLoading}>
+                {bulkLoading ? "Inscribiendo..." : "Inscribir grupo a todas las cargas"}
+              </Button>
+
+              <Button variant="secondary" onClick={loadAssignments} disabled={!periodId || !groupId || bulkLoading}>
+                Refrescar cargas
+              </Button>
+            </div>
+
+            <div className="text-xs text-muted-foreground">
+              Recomendación: ejecuta esto después de cargar alumnos + crear cargas. Luego el alumno ya puede ir a “Mi horario”.
             </div>
           </CardContent>
         </Card>
@@ -285,7 +387,8 @@ export default function ClassAssignmentsPage() {
                 <option value="">Selecciona...</option>
                 {teachers.map((t) => (
                   <option key={t._id} value={t._id}>
-                    {t.name}{t.employeeNumber ? ` (${t.employeeNumber})` : ""}
+                    {t.name}
+                    {t.employeeNumber ? ` (${t.employeeNumber})` : ""}
                   </option>
                 ))}
               </select>
@@ -362,7 +465,7 @@ export default function ClassAssignmentsPage() {
             </div>
 
             <div className="text-xs text-muted-foreground">
-              Nota: esta tabla es la “carga” del grupo. Horarios debería basarse en estas asignaciones.
+              Nota: esta tabla es la “carga” del grupo. Horarios y “Mi horario” dependen de CourseEnrollments.
             </div>
           </CardContent>
         </Card>
