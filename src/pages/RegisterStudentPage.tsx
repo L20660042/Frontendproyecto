@@ -7,6 +7,12 @@ import { Label } from "../components/label";
 import { Alert, AlertDescription } from "../components/alert";
 import { api } from "../api/client";
 
+function buildStudentEmail(controlNumber: string) {
+  const cn = String(controlNumber ?? "").trim();
+  if (!cn) return "";
+  return `l${cn}@matehuala.tecnm.mx`.toLowerCase();
+}
+
 export default function RegisterStudentPage() {
   const [controlNumber, setControlNumber] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -14,8 +20,31 @@ export default function RegisterStudentPage() {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
   const [okMsg, setOkMsg] = React.useState("");
+  const [copied, setCopied] = React.useState(false);
 
   const nav = useNavigate();
+
+  const email = React.useMemo(() => buildStudentEmail(controlNumber), [controlNumber]);
+
+  const copyEmail = async () => {
+    setCopied(false);
+    try {
+      if (!email) return;
+      await navigator.clipboard.writeText(email);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      // fallback: selección manual
+      const el = document.getElementById("studentEmail") as HTMLInputElement | null;
+      if (el) {
+        el.focus();
+        el.select();
+        document.execCommand("copy");
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1200);
+      }
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +59,15 @@ export default function RegisterStudentPage() {
     try {
       setLoading(true);
       const res = await api.post("/auth/register-student", { controlNumber: cn, password });
-      setOkMsg(res.data?.message ?? "Registro creado. Espera activación.");
+
+      const status = String(res.data?.status ?? "");
+      const msg =
+        status === "active"
+          ? (res.data?.message ?? "Cuenta creada y ACTIVADA. Ya puedes iniciar sesión.")
+          : (res.data?.message ?? "Registro creado. Espera activación.");
+
+      setOkMsg(msg);
+
       setTimeout(() => nav("/login", { replace: true }), 1200);
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? "Error al registrar";
@@ -47,9 +84,10 @@ export default function RegisterStudentPage() {
           <CardHeader>
             <CardTitle>Registro de Estudiante</CardTitle>
             <CardDescription>
-              Tu correo se generará como <b>l{`{NoControl}`}@matehuala.tecnm.mx</b> y tu cuenta quedará en <b>pending</b>.
+              Ingresa tu número de control y define tu contraseña. Tu correo institucional se genera automáticamente.
             </CardDescription>
           </CardHeader>
+
           <CardContent>
             {error ? (
               <Alert variant="destructive">
@@ -66,7 +104,33 @@ export default function RegisterStudentPage() {
             <form className="space-y-4 mt-4" onSubmit={submit}>
               <div className="space-y-2">
                 <Label>Número de control</Label>
-                <Input value={controlNumber} onChange={(e) => setControlNumber(e.target.value)} placeholder="20660042" disabled={loading} />
+                <Input
+                  value={controlNumber}
+                  onChange={(e) => setControlNumber(e.target.value)}
+                  placeholder="20660042"
+                  disabled={loading}
+                />
+              </div>
+
+              {/* ✅ Campo EMAIL solo lectura + copiar */}
+              <div className="space-y-2">
+                <Label>Correo institucional</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="studentEmail"
+                    value={email}
+                    readOnly
+                    disabled={!email}
+                    className="flex-1"
+                    title="Este correo se genera automáticamente"
+                  />
+                  <Button type="button" variant="secondary" onClick={copyEmail} disabled={!email}>
+                    {copied ? "Copiado" : "Copiar"}
+                  </Button>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Este campo no se puede editar. Copia y pega el correo en el login cuando lo necesites.
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -85,7 +149,10 @@ export default function RegisterStudentPage() {
             </form>
 
             <div className="mt-4 text-sm text-muted-foreground">
-              ¿Ya tienes cuenta? <Link to="/login" className="text-primary underline">Inicia sesión</Link>
+              ¿Ya tienes cuenta?{" "}
+              <Link to="/login" className="text-primary underline">
+                Inicia sesión
+              </Link>
             </div>
           </CardContent>
         </Card>

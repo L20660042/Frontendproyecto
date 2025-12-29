@@ -428,7 +428,6 @@ export default function EnrollmentsPage() {
                       </tr>
                     ) : (
                       enrollmentsGroup
-                        .filter((e) => e.status === "active")
                         .map((e) => {
                           const st = e.studentId ?? {};
                           return (

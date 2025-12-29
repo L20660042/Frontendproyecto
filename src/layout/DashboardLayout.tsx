@@ -20,6 +20,7 @@ const NAV: NavItem[] = [
   { label: "Mis materias (Estudiante)", to: "/estudiante/materias", roles: ["estudiante"] },
   { label: "Inicio (Superadmin)", to: "/dashboard/superadmin", roles: ["superadmin"] },
   { label: "Importación CSV", to: "/catalogos/importacion", roles: ["superadmin", "admin", "control_escolar"] },
+  { label: "Inscripciones por grupo (Periodo)", to: "/catalogos/enrollments", roles: ["superadmin", "admin", "control_escolar"] },
   { label: "Inicio (Admin)", to: "/dashboard/admin", roles: ["admin"] },
   { label: "Inicio (Control Escolar)", to: "/control-escolar", roles: ["control_escolar"] },
   { label: "Inscripciones por materia", to: "/catalogos/inscripciones", roles: ["superadmin", "admin", "control_escolar"] },
