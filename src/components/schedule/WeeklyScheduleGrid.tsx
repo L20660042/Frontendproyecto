@@ -7,6 +7,7 @@ export type ScheduleBlockUI = {
   startTime: string; // "08:00"
   endTime: string;   // "09:50"
   room?: string;
+  deliveryMode?: "presencial" | "semipresencial" | "asincrono" | string;
   subjectName?: string;
   teacherName?: string;
   groupName?: string;

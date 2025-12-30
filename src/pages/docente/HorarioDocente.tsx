@@ -41,6 +41,7 @@ export default function TeacherSchedulePage() {
           startTime: b.startTime,
           endTime: b.endTime,
           room: b.room,
+          deliveryMode: b.deliveryMode, // ✅ AQUI (para badge Presencial/Semi/Async)
           subjectName: b.subjectId?.name ?? b.subject?.name,
           teacherName: b.teacherId?.name ?? b.teacher?.name,
           groupName: b.groupId?.name ?? b.group?.name,
@@ -70,7 +71,8 @@ export default function TeacherSchedulePage() {
           <option value="">Selecciona...</option>
           {periods.map((p) => (
             <option key={p._id} value={p._id}>
-              {p.name}{p.isActive ? " (Activo)" : ""}
+              {p.name}
+              {p.isActive ? " (Activo)" : ""}
             </option>
           ))}
         </select>

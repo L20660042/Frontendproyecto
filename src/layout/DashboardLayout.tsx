@@ -15,6 +15,7 @@ const NAV: NavItem[] = [
   // Home por rol
   { label: "Catálogo: Alumnos", to: "/catalogos/alumnos", roles: ["superadmin", "admin", "control_escolar"] },
   { label: "Mis cargas (Docente)", to: "/docente/cargas", roles: ["docente"] },
+  { label: "Kardex (Estudiante)", to: "/estudiante/kardex", roles: ["estudiante"] },
   { label: "Cambiar contraseña", to: "/mi-cuenta/password", roles: ALL_ROLES },
   { label: "Grupo → Cargas → Inscritos", to: "/catalogos/resumen-grupo", roles: ["superadmin", "admin", "control_escolar"] },
   { label: "Mis materias (Estudiante)", to: "/estudiante/materias", roles: ["estudiante"] },

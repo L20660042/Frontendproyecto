@@ -32,6 +32,7 @@ function csvEscape(v: any) {
   return needsQuotes ? `"${cleaned}"` : cleaned;
 }
 
+// BOM para Excel (acentos bien)
 function downloadTextFile(filename: string, text: string, mime = "text/csv;charset=utf-8;") {
   const bom = "\uFEFF";
   const blob = new Blob([bom + text], { type: mime });
@@ -53,12 +54,7 @@ function downloadCSV(filename: string, rows: Array<Record<string, any>>) {
   downloadTextFile(filename, csv);
 }
 
-function isValidGrade(n: number) {
-  return Number.isFinite(n) && n >= 0 && n <= 100;
-}
-
 function safeFilename(s: string) {
-  // quita acentos y símbolos raros para nombre de archivo
   const plain = String(s ?? "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
@@ -69,6 +65,13 @@ function safeFilename(s: string) {
     .toLowerCase();
 }
 
+function isValidGrade(n: number) {
+  return Number.isFinite(n) && n >= 0 && n <= 100;
+}
+
+/**
+ * Lista de asistencia (ya la tenías) estilo plantilla simple (CSV).
+ */
 function exportAttendanceGrid(params: {
   institutionName: string;
   periodName: string;
@@ -76,7 +79,7 @@ function exportAttendanceGrid(params: {
   subjectName: string;
   groupName: string;
   enrollments: CourseEnrollment[];
-  weeks?: number; // default 4
+  weeks?: number;
 }) {
   const weeks = params.weeks ?? 4;
 
@@ -88,7 +91,7 @@ function exportAttendanceGrid(params: {
 
   const cols: string[] = ["No.", "NOMBRE DEL ALUMNO"];
   for (let w = 0; w < weeks; w++) cols.push("L", "M", "M", "J", "V");
-  cols.push("T"); // Total
+  cols.push("T");
 
   const width = cols.length;
   const blankRow = () => new Array(width).fill("");
@@ -103,7 +106,7 @@ function exportAttendanceGrid(params: {
   meta[0] = "DOCENTE:";
   meta[1] = params.teacherName;
 
-  meta[5] = "GRADO Y GRUPO:";
+  meta[5] = "GRUPO:";
   meta[6] = params.groupName;
 
   meta[12] = "PERIODO:";
@@ -113,24 +116,73 @@ function exportAttendanceGrid(params: {
   meta[18] = params.subjectName;
 
   lines.push(meta.map(csvEscape).join(","));
-
-  // Línea en blanco
   lines.push(blankRow().join(","));
-
-  // Encabezado de la tabla
   lines.push(cols.map(csvEscape).join(","));
 
-  // Filas de alumnos
   sorted.forEach((e, idx) => {
     const st = e.studentId ?? {};
     const row = blankRow();
     row[0] = String(idx + 1);
     row[1] = String(st.name ?? "");
-    // El resto queda vacío para marcar asistencia
     lines.push(row.map(csvEscape).join(","));
   });
 
   const filename = `asistencia_${safeFilename(params.groupName)}_${safeFilename(params.subjectName)}_${safeFilename(
+    params.periodName,
+  )}.csv`;
+
+  downloadTextFile(filename, lines.join("\n"));
+}
+
+/**
+ * ✅ Reporte de calificaciones (CSV) con encabezado institucional.
+ */
+function exportGradesReport(params: {
+  institutionName: string;
+  periodName: string;
+  teacherName: string;
+  subjectName: string;
+  subjectCode?: string;
+  groupName: string;
+  enrollments: CourseEnrollment[];
+}) {
+  const sorted = [...(params.enrollments ?? [])].sort((a, b) => {
+    const an = String(a?.studentId?.name ?? "").trim().toLowerCase();
+    const bn = String(b?.studentId?.name ?? "").trim().toLowerCase();
+    return an.localeCompare(bn, "es", { sensitivity: "base" });
+  });
+
+  // Encabezado tipo hoja + tabla
+  const lines: string[] = [];
+
+  const subjectLabel = `${params.subjectCode ? params.subjectCode + " - " : ""}${params.subjectName}`;
+
+  lines.push([params.institutionName].map(csvEscape).join(","));
+  lines.push(["REPORTE DE CALIFICACIONES"].map(csvEscape).join(","));
+  lines.push([""].join(","));
+
+  lines.push([`PERIODO: ${params.periodName}`].map(csvEscape).join(","));
+  lines.push([`DOCENTE: ${params.teacherName}`].map(csvEscape).join(","));
+  lines.push([`MATERIA: ${subjectLabel}`].map(csvEscape).join(","));
+  lines.push([`GRUPO: ${params.groupName}`].map(csvEscape).join(","));
+  lines.push([""].join(","));
+
+  const header = ["No.", "No. Control", "Nombre del alumno", "Calificación final"];
+  lines.push(header.map(csvEscape).join(","));
+
+  sorted.forEach((e, idx) => {
+    const st = e.studentId ?? {};
+    const grade =
+      e.finalGrade === null || e.finalGrade === undefined || Number.isNaN(Number(e.finalGrade))
+        ? ""
+        : String(e.finalGrade);
+
+    lines.push(
+      [String(idx + 1), String(st.controlNumber ?? ""), String(st.name ?? ""), grade].map(csvEscape).join(","),
+    );
+  });
+
+  const filename = `calificaciones_${safeFilename(params.groupName)}_${safeFilename(subjectLabel)}_${safeFilename(
     params.periodName,
   )}.csv`;
 
@@ -151,7 +203,6 @@ export default function MisCargasDocente() {
 
   const [gradeDraft, setGradeDraft] = React.useState<Record<string, string>>({});
 
-  // Periodos
   React.useEffect(() => {
     (async () => {
       setError("");
@@ -168,7 +219,6 @@ export default function MisCargasDocente() {
     })();
   }, []);
 
-  // Mis cargas por periodo
   const loadMyLoads = React.useCallback(async () => {
     setError("");
     setInfo("");
@@ -197,7 +247,6 @@ export default function MisCargasDocente() {
     loadMyLoads();
   }, [loadMyLoads]);
 
-  // Alumnos inscritos de una carga
   const loadStudents = React.useCallback(
     async (ca: ClassAssignment) => {
       setError("");
@@ -278,7 +327,7 @@ export default function MisCargasDocente() {
     if (!selected) return;
     if (!enrollments || enrollments.length === 0) return;
 
-    const institutionName = "Tecnologico Nacional de Mexico - Campus Matehuala"; // ASCII (sin guiones raros)
+    const institutionName = "Tecnológico Nacional de México — Campus Matehuala";
     const periodName = periods.find((p) => p._id === periodId)?.name ?? "";
     const teacherName = selected.teacherId?.name ?? "";
     const subjectName = selected.subjectId?.name ?? "";
@@ -291,7 +340,29 @@ export default function MisCargasDocente() {
       subjectName,
       groupName,
       enrollments,
-      weeks: 4, // cambia a 5 si quieres 5 semanas
+      weeks: 4,
+    });
+  };
+
+  const downloadGradesReport = () => {
+    if (!selected) return;
+    if (!enrollments || enrollments.length === 0) return;
+
+    const institutionName = "Tecnológico Nacional de México — Campus Matehuala";
+    const periodName = periods.find((p) => p._id === periodId)?.name ?? "";
+    const teacherName = selected.teacherId?.name ?? "";
+    const subjectName = selected.subjectId?.name ?? "";
+    const subjectCode = selected.subjectId?.code ?? "";
+    const groupName = selected.groupId?.name ?? "";
+
+    exportGradesReport({
+      institutionName,
+      periodName,
+      teacherName,
+      subjectName,
+      subjectCode,
+      groupName,
+      enrollments,
     });
   };
 
@@ -300,8 +371,8 @@ export default function MisCargasDocente() {
     setInfo("");
 
     const raw = (gradeDraft[courseEnrollmentId] ?? "").trim();
-    let finalGrade: number | null = null;
 
+    let finalGrade: number | null = null;
     if (raw !== "") {
       const n = Number(raw);
       if (!isValidGrade(n)) {
@@ -404,11 +475,10 @@ export default function MisCargasDocente() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Cargas */}
         <Card>
           <CardHeader>
             <CardTitle>Mis cargas del periodo</CardTitle>
-            <CardDescription>Selecciona una carga para ver alumnos, descargar asistencia y capturar calificación final.</CardDescription>
+            <CardDescription>Selecciona una carga para ver alumnos y exportar reportes.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="overflow-auto border border-border rounded-lg">
@@ -457,7 +527,6 @@ export default function MisCargasDocente() {
           </CardContent>
         </Card>
 
-        {/* Alumnos */}
         <Card>
           <CardHeader>
             <CardTitle>Alumnos inscritos</CardTitle>
@@ -482,7 +551,15 @@ export default function MisCargasDocente() {
               </Button>
 
               <Button variant="secondary" onClick={downloadAttendance} disabled={!selected || enrollments.length === 0}>
-                Descargar lista de asistencia
+                Descargar asistencia
+              </Button>
+
+              <Button
+                variant="secondary"
+                onClick={downloadGradesReport}
+                disabled={!selected || enrollments.length === 0}
+              >
+                Descargar reporte de calificaciones
               </Button>
 
               <Button onClick={saveAll} disabled={!selected || enrollments.length === 0 || loading}>
