@@ -17,59 +17,61 @@ type NavSection = {
 };
 
 const ALL_ROLES: AppRole[] = [
-  "superadmin",
-  "admin",
-  "docente",
-  "estudiante",
-  "jefe_departamento",
-  "tutor",
-  "control_escolar",
-  "capacitacion",
+  "SUPERADMIN",
+  "ADMIN",
+  "SERVICIOS_ESCOLARES",
+  "DOCENTE",
+  "ALUMNO",
+  "JEFE",
+  "SUBDIRECCION",
+  "DESARROLLO_ACADEMICO",
 ];
 
 const NAV_SECTIONS: NavSection[] = [
   {
     title: "Inicio",
     items: [
-      { label: "Inicio", to: "/dashboard/superadmin", roles: ["superadmin"] },
-      { label: "Inicio", to: "/dashboard/admin", roles: ["admin"] },
-      { label: "Inicio", to: "/control-escolar", roles: ["control_escolar"] },
-      { label: "Inicio", to: "/docente", roles: ["docente"] },
-      { label: "Inicio", to: "/estudiante", roles: ["estudiante"] },
-      { label: "Inicio", to: "/jefe-academico", roles: ["jefe_departamento"] },
-      { label: "Inicio", to: "/tutor", roles: ["tutor"] },
-      { label: "Inicio", to: "/desarrollo-academico", roles: ["capacitacion"] },
+      { label: "Inicio", to: "/dashboard/superadmin", roles: ["SUPERADMIN"] },
+      { label: "Inicio", to: "/dashboard/admin", roles: ["ADMIN"] },
+      { label: "Inicio", to: "/control-escolar", roles: ["SERVICIOS_ESCOLARES"] },
+      { label: "Inicio", to: "/docente", roles: ["DOCENTE"] },
+      { label: "Inicio", to: "/estudiante", roles: ["ALUMNO"] },
+      { label: "Inicio", to: "/jefe-academico", roles: ["JEFE"] },
+      { label: "Inicio", to: "/subdireccion", roles: ["SUBDIRECCION"] },
+      { label: "Inicio", to: "/desarrollo-academico", roles: ["DESARROLLO_ACADEMICO"] },
     ],
   },
   {
     title: "Operación académica",
     items: [
-      { label: "Horarios", to: "/horarios", roles: ["superadmin", "admin", "control_escolar"] },
+      { label: "Horarios (bloques)", to: "/horarios", roles: ["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"] },
       {
         label: "Cargas: grupo–materia–docente",
-        to: "/horarios/cargas",
-        roles: ["superadmin", "admin", "control_escolar"],
+        to: "/catalogos/cargas",
+        roles: ["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"],
       },
       {
         label: "Inscripciones por grupo",
         to: "/catalogos/enrollments",
-        roles: ["superadmin", "admin", "control_escolar"],
+        roles: ["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"],
       },
       {
         label: "Inscripciones por materia",
         to: "/catalogos/inscripciones",
-        roles: ["superadmin", "admin", "control_escolar"],
+        roles: ["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"],
       },
       {
         label: "Resumen por grupo",
         to: "/catalogos/resumen-grupo",
-        roles: ["superadmin", "admin", "control_escolar"],
+        roles: ["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"],
       },
-      { label: "Mis cargas", to: "/docente/cargas", roles: ["docente"] },
-      { label: "Mi horario", to: "/docente/horario", roles: ["docente"] },
-      { label: "Mi horario", to: "/estudiante/horario", roles: ["estudiante"] },
-      { label: "Mis materias", to: "/estudiante/materias", roles: ["estudiante"] },
-      { label: "Kardex", to: "/estudiante/kardex", roles: ["estudiante"] },
+
+      { label: "Mis cargas", to: "/docente/cargas", roles: ["DOCENTE"] },
+      { label: "Mi horario", to: "/docente/horario", roles: ["DOCENTE"] },
+
+      { label: "Mi horario", to: "/estudiante/horario", roles: ["ALUMNO"] },
+      { label: "Mis materias", to: "/estudiante/materias", roles: ["ALUMNO"] },
+      { label: "Kardex", to: "/estudiante/kardex", roles: ["ALUMNO"] },
     ],
   },
   {
@@ -78,20 +80,20 @@ const NAV_SECTIONS: NavSection[] = [
       {
         label: "Administrar actividades",
         to: "/catalogos/actividades",
-        roles: ["superadmin", "admin", "control_escolar"],
+        roles: ["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"],
       },
-      { label: "Mis actividades", to: "/estudiante/actividades", roles: ["estudiante"] },
+      { label: "Mis actividades", to: "/estudiante/actividades", roles: ["ALUMNO"] },
     ],
   },
   {
     title: "Configuración",
     items: [
-      { label: "Periodos", to: "/catalogos/periodos", roles: ["superadmin", "admin", "control_escolar"] },
-      { label: "Carreras", to: "/catalogos/carreras", roles: ["superadmin", "admin", "control_escolar"] },
-      { label: "Grupos", to: "/catalogos/grupos", roles: ["superadmin", "admin", "control_escolar"] },
-      { label: "Materias", to: "/catalogos/materias", roles: ["superadmin", "admin", "control_escolar"] },
-      { label: "Alumnos", to: "/catalogos/alumnos", roles: ["superadmin", "admin", "control_escolar"] },
-      { label: "Importación CSV", to: "/catalogos/importacion", roles: ["superadmin", "admin", "control_escolar"] },
+      { label: "Periodos", to: "/catalogos/periodos", roles: ["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"] },
+      { label: "Carreras", to: "/catalogos/carreras", roles: ["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"] },
+      { label: "Grupos", to: "/catalogos/grupos", roles: ["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"] },
+      { label: "Materias", to: "/catalogos/materias", roles: ["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"] },
+      { label: "Alumnos", to: "/catalogos/alumnos", roles: ["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"] },
+      { label: "Importación CSV", to: "/catalogos/importacion", roles: ["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"] },
     ],
   },
   {
@@ -100,31 +102,32 @@ const NAV_SECTIONS: NavSection[] = [
       {
         label: "Dashboard académico",
         to: "/dashboard/academico",
-        roles: ["superadmin", "admin", "control_escolar", "jefe_departamento", "capacitacion"],
+        roles: ["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES", "JEFE", "SUBDIRECCION", "DESARROLLO_ACADEMICO"],
       },
       {
         label: "Calidad docente",
         to: "/admin/analytics",
-        roles: ["superadmin", "admin", "jefe_departamento", "capacitacion"],
+        roles: ["SUPERADMIN", "ADMIN", "JEFE", "SUBDIRECCION", "DESARROLLO_ACADEMICO"],
       },
       {
         label: "Dashboard IA",
         to: "/dashboard/ia",
-        roles: ["superadmin", "admin", "control_escolar", "jefe_departamento", "capacitacion"],
+        roles: ["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES", "JEFE", "SUBDIRECCION", "DESARROLLO_ACADEMICO"],
       },
       {
         label: "Bandeja de quejas",
         to: "/admin/quejas",
-        roles: ["superadmin", "admin", "jefe_departamento", "capacitacion"],
+        roles: ["SUPERADMIN", "ADMIN", "JEFE", "SUBDIRECCION", "DESARROLLO_ACADEMICO"],
       },
-      { label: "Evaluación docente", to: "/estudiante/evaluacion", roles: ["estudiante"] },
-      { label: "Quejas y sugerencias", to: "/estudiante/quejas", roles: ["estudiante"] },
-      { label: "Retroalimentación (IA)", to: "/docente/retro", roles: ["docente"] },
+
+      { label: "Evaluación docente", to: "/estudiante/evaluacion", roles: ["ALUMNO"] },
+      { label: "Quejas y sugerencias", to: "/estudiante/quejas", roles: ["ALUMNO"] },
+      { label: "Retroalimentación (IA)", to: "/docente/retro", roles: ["DOCENTE"] },
     ],
   },
   {
     title: "Administración",
-    items: [{ label: "Usuarios", to: "/dashboard/usuarios", roles: ["superadmin", "admin", "control_escolar"] }],
+    items: [{ label: "Usuarios", to: "/dashboard/usuarios", roles: ["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"] }],
   },
   {
     title: "Cuenta",
@@ -162,6 +165,10 @@ function NavItemLink({ to, label }: { to: string; label: string }) {
       {label}
     </NavLink>
   );
+}
+
+function hasAccess(userRoles: AppRole[], itemRoles: AppRole[]) {
+  return userRoles.some((r) => itemRoles.includes(r));
 }
 
 function Sidebar({
@@ -219,13 +226,7 @@ function Sidebar({
   );
 }
 
-export default function DashboardLayout({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+export default function DashboardLayout({ title, children }: { title: string; children: React.ReactNode }) {
   const { user, clearSession } = useAuth();
   const location = useLocation();
 
@@ -233,7 +234,6 @@ export default function DashboardLayout({
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   React.useEffect(() => {
-    // Cierra el menú móvil al cambiar de ruta.
     setMobileOpen(false);
   }, [location.pathname]);
 
@@ -244,7 +244,7 @@ export default function DashboardLayout({
 
     return NAV_SECTIONS.map((sec) => {
       const items = sec.items.filter((it) => {
-        if (!it.roles.includes(user.role)) return false;
+        if (!hasAccess(user.roles, it.roles)) return false;
         if (!hasQuery) return true;
         return it.label.toLowerCase().includes(q);
       });
@@ -254,7 +254,6 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-background text-foreground flex">
-      {/* Sidebar desktop */}
       <aside className="hidden md:flex w-80 border-r border-border bg-card">
         <Sidebar
           role={user?.role}
@@ -266,7 +265,6 @@ export default function DashboardLayout({
         />
       </aside>
 
-      {/* Sidebar mobile (overlay) */}
       {mobileOpen ? (
         <div className="md:hidden fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
@@ -290,9 +288,7 @@ export default function DashboardLayout({
         </div>
       ) : null}
 
-      {/* Main */}
       <main className="flex-1">
-        {/* Header */}
         <header className="border-b border-border bg-card">
           <div className="px-6 py-4 flex items-center justify-between gap-3">
             <div>

@@ -12,7 +12,6 @@ import TeacherSchedulePage from "./pages/docente/HorarioDocente";
 import StudentSchedulePage from "./pages/alumno/HorarioAlumno";
 import UsersPage from "./pages/admin/UsersPage";
 import ClassAssignmentsPage from "./pages/catalogos/ClassAssignmentsPage";
-import ClassAssignmentsPage1 from "./pages/horarios/ClassAssignmentsPage";
 import StudentsPage from "./pages/catalogos/StudentsPage";
 import RegisterStudentPage from "./pages/RegisterStudentPage";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
@@ -32,7 +31,7 @@ import StudentActivitiesPage from "./pages/alumno/MisActividadesAlumno";
 import ActivitiesPage from "./pages/catalogos/ActivitiesPage";
 import DashboardAcademico from "./pages/admin/DashboardAcademico";
 import DashboardIAPage from "./pages/admin/DashboardIAPage";
-
+import { useAuth } from "./auth/AuthContext";
 
 function SimpleHome({ title }: { title: string }) {
   return (
@@ -47,24 +46,51 @@ function SimpleHome({ title }: { title: string }) {
   );
 }
 
+function DashboardRedirect() {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+
+  switch (user.role) {
+    case "SUPERADMIN":
+      return <Navigate to="/dashboard/superadmin" replace />;
+    case "ADMIN":
+      return <Navigate to="/dashboard/admin" replace />;
+    case "SERVICIOS_ESCOLARES":
+      return <Navigate to="/control-escolar" replace />;
+    case "DOCENTE":
+      return <Navigate to="/docente" replace />;
+    case "ALUMNO":
+      return <Navigate to="/estudiante" replace />;
+    case "JEFE":
+      return <Navigate to="/jefe-academico" replace />;
+    case "SUBDIRECCION":
+      return <Navigate to="/subdireccion" replace />;
+    case "DESARROLLO_ACADEMICO":
+      return <Navigate to="/desarrollo-academico" replace />;
+    default:
+      return <Navigate to="/dashboard/admin" replace />;
+  }
+}
+
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterStudentPage />} />
 
-      {/* Homes por rol */}
       <Route
         path="/dashboard/superadmin"
         element={
-          <RequireRole allow={["superadmin"]}>
+          <RequireRole allow={["SUPERADMIN"]}>
             <SimpleHome title="Dashboard Superadmin" />
           </RequireRole>
         }
       />
+
       <Route
         path="/dashboard/admin"
         element={
-          <RequireRole allow={["admin"]}>
+          <RequireRole allow={["ADMIN"]}>
             <SimpleHome title="Dashboard Admin" />
           </RequireRole>
         }
@@ -73,8 +99,8 @@ export default function App() {
       <Route
         path="/control-escolar"
         element={
-          <RequireRole allow={["control_escolar"]}>
-            <SimpleHome title="Panel Control Escolar" />
+          <RequireRole allow={["SERVICIOS_ESCOLARES"]}>
+            <SimpleHome title="Panel Servicios Escolares" />
           </RequireRole>
         }
       />
@@ -82,7 +108,7 @@ export default function App() {
       <Route
         path="/docente"
         element={
-          <RequireRole allow={["docente"]}>
+          <RequireRole allow={["DOCENTE"]}>
             <SimpleHome title="Panel Docente" />
           </RequireRole>
         }
@@ -91,8 +117,8 @@ export default function App() {
       <Route
         path="/estudiante"
         element={
-          <RequireRole allow={["estudiante"]}>
-            <SimpleHome title="Panel Estudiante" />
+          <RequireRole allow={["ALUMNO"]}>
+            <SimpleHome title="Panel Alumno" />
           </RequireRole>
         }
       />
@@ -100,17 +126,17 @@ export default function App() {
       <Route
         path="/jefe-academico"
         element={
-          <RequireRole allow={["jefe_departamento"]}>
+          <RequireRole allow={["JEFE"]}>
             <SimpleHome title="Panel Jefe Académico" />
           </RequireRole>
         }
       />
 
       <Route
-        path="/tutor"
+        path="/subdireccion"
         element={
-          <RequireRole allow={["tutor"]}>
-            <SimpleHome title="Panel Tutor" />
+          <RequireRole allow={["SUBDIRECCION"]}>
+            <SimpleHome title="Panel Subdirección" />
           </RequireRole>
         }
       />
@@ -118,43 +144,43 @@ export default function App() {
       <Route
         path="/desarrollo-academico"
         element={
-          <RequireRole allow={["capacitacion"]}>
+          <RequireRole allow={["DESARROLLO_ACADEMICO"]}>
             <SimpleHome title="Panel Desarrollo Académico" />
           </RequireRole>
         }
       />
 
-      {/* Catálogos */}
       <Route
         path="/catalogos/periodos"
         element={
-          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
+          <RequireRole allow={["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"]}>
             <PeriodsPage />
           </RequireRole>
         }
       />
+
       <Route
         path="/catalogos/carreras"
         element={
-          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
+          <RequireRole allow={["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"]}>
             <CareersPage />
           </RequireRole>
         }
       />
+
       <Route
         path="/catalogos/enrollments"
         element={
-          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
+          <RequireRole allow={["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"]}>
             <EnrollmentsPage />
           </RequireRole>
         }
       />
 
-
       <Route
         path="/catalogos/grupos"
         element={
-          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
+          <RequireRole allow={["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"]}>
             <GroupsPage />
           </RequireRole>
         }
@@ -163,115 +189,191 @@ export default function App() {
       <Route
         path="/catalogos/materias"
         element={
-          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
+          <RequireRole allow={["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"]}>
             <SubjectsPage />
           </RequireRole>
         }
       />
+
       <Route
         path="/horarios"
         element={
-          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
+          <RequireRole allow={["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"]}>
             <SchedulesPage />
           </RequireRole>
         }
       />
-      <Route
-          path="/estudiante/horario"
-          element={
-            <RequireRole allow={["estudiante"]}>
-              <StudentSchedulePage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="/estudiante/kardex"
-          element={
-            <RequireRole allow={["estudiante"]}>
-              <KardexAlumno />
-            </RequireRole>
-          }
-        />
-      <Route
-        path="/docente/horario"
-        element={
-          <RequireRole allow={["docente"]}>
-            <TeacherSchedulePage />
-          </RequireRole>
-        }
-      />
-      <Route
-      path="/docente/cargas"
-      element={
-        <RequireRole allow={["docente"]}>
-          <MisCargasDocente />
-        </RequireRole>
-      }
-    />
 
-      <Route
-        path="/dashboard/usuarios"
-        element={
-          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
-            <UsersPage />
-          </RequireRole>
-        }
-      />
-      <Route
-        path="/catalogos/inscripciones"
-        element={
-          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
-            <CourseEnrollmentsPage/>
-          </RequireRole>
-        }
-      />
       <Route
         path="/catalogos/cargas"
         element={
-          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
+          <RequireRole allow={["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"]}>
             <ClassAssignmentsPage />
           </RequireRole>
         }
       />
+
       <Route
-        path="/horarios/cargas"
+        path="/catalogos/inscripciones"
         element={
-          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
-            <ClassAssignmentsPage1 />
+          <RequireRole allow={["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"]}>
+            <CourseEnrollmentsPage />
           </RequireRole>
         }
       />
+
       <Route
         path="/catalogos/resumen-grupo"
         element={
-          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
+          <RequireRole allow={["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"]}>
             <GroupLoadsSummaryPage />
           </RequireRole>
         }
       />
 
-      <Route path="/register" element={<RegisterStudentPage />} />
       <Route
         path="/catalogos/alumnos"
         element={
-          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
+          <RequireRole allow={["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"]}>
             <StudentsPage />
+          </RequireRole>
+        }
+      />
+
+      <Route
+        path="/catalogos/importacion"
+        element={
+          <RequireRole allow={["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"]}>
+            <ImportacionCsvPage />
+          </RequireRole>
+        }
+      />
+
+      <Route
+        path="/catalogos/actividades"
+        element={
+          <RequireRole allow={["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"]}>
+            <ActivitiesPage />
+          </RequireRole>
+        }
+      />
+
+      <Route
+        path="/docente/horario"
+        element={
+          <RequireRole allow={["DOCENTE"]}>
+            <TeacherSchedulePage />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/docente/cargas"
+        element={
+          <RequireRole allow={["DOCENTE"]}>
+            <MisCargasDocente />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/docente/retro"
+        element={
+          <RequireRole allow={["DOCENTE"]}>
+            <RetroalimentacionDocente />
+          </RequireRole>
+        }
+      />
+
+      {/* Alumno */}
+      <Route
+        path="/estudiante/horario"
+        element={
+          <RequireRole allow={["ALUMNO"]}>
+            <StudentSchedulePage />
           </RequireRole>
         }
       />
       <Route
         path="/estudiante/materias"
         element={
-          <RequireRole allow={["estudiante"]}>
+          <RequireRole allow={["ALUMNO"]}>
             <MisMateriasAlumno />
           </RequireRole>
         }
       />
       <Route
-        path="/catalogos/importacion"
+        path="/estudiante/kardex"
         element={
-          <RequireRole allow={["superadmin", "admin", "control_escolar",]}>
-            <ImportacionCsvPage />
+          <RequireRole allow={["ALUMNO"]}>
+            <KardexAlumno />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/estudiante/evaluacion"
+        element={
+          <RequireRole allow={["ALUMNO"]}>
+            <EvaluacionDocente />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/estudiante/quejas"
+        element={
+          <RequireRole allow={["ALUMNO"]}>
+            <QuejasAlumno />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/estudiante/actividades"
+        element={
+          <RequireRole allow={["ALUMNO"]}>
+            <StudentActivitiesPage />
+          </RequireRole>
+        }
+      />
+
+      <Route
+        path="/dashboard/usuarios"
+        element={
+          <RequireRole allow={["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES"]}>
+            <UsersPage />
+          </RequireRole>
+        }
+      />
+
+      <Route
+        path="/admin/analytics"
+        element={
+          <RequireRole allow={["SUPERADMIN", "ADMIN", "JEFE", "SUBDIRECCION", "DESARROLLO_ACADEMICO"]}>
+            <CalidadDocentePage />
+          </RequireRole>
+        }
+      />
+
+      <Route
+        path="/admin/quejas"
+        element={
+          <RequireRole allow={["SUPERADMIN", "ADMIN", "JEFE", "SUBDIRECCION", "DESARROLLO_ACADEMICO"]}>
+            <QuejasAdminPage />
+          </RequireRole>
+        }
+      />
+
+      <Route
+        path="/dashboard/academico"
+        element={
+          <RequireRole allow={["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES", "JEFE", "SUBDIRECCION", "DESARROLLO_ACADEMICO"]}>
+            <DashboardAcademico />
+          </RequireRole>
+        }
+      />
+
+      <Route
+        path="/dashboard/ia"
+        element={
+          <RequireRole allow={["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES", "JEFE", "SUBDIRECCION", "DESARROLLO_ACADEMICO"]}>
+            <DashboardIAPage />
           </RequireRole>
         }
       />
@@ -284,88 +386,8 @@ export default function App() {
           </RequireAuth>
         }
       />
-      <Route
-        path="/estudiante/evaluacion"
-        element={
-          <RequireRole allow={["estudiante"]}>
-            <EvaluacionDocente />
-          </RequireRole>
-        }
-      />
 
-      <Route
-        path="/estudiante/quejas"
-        element={
-          <RequireRole allow={["estudiante"]}>
-            <QuejasAlumno />
-          </RequireRole>
-        }
-      />
-
-      <Route
-        path="/docente/retro"
-        element={
-          <RequireRole allow={["docente"]}>
-            <RetroalimentacionDocente />
-          </RequireRole>
-        }
-      />
-
-      <Route
-        path="/admin/analytics"
-        element={
-          <RequireRole allow={["superadmin", "admin", "jefe_departamento", "capacitacion"]}>
-            <CalidadDocentePage />
-          </RequireRole>
-        }
-      />
-
-      <Route
-        path="/admin/quejas"
-        element={
-          <RequireRole allow={["superadmin", "admin", "jefe_departamento", "capacitacion"]}>
-            <QuejasAdminPage />
-          </RequireRole>
-        }
-      />
-      <Route
-        path="/catalogos/actividades"
-        element={
-          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
-            <ActivitiesPage />
-          </RequireRole>
-        }
-      />
-
-      <Route
-        path="/estudiante/actividades"
-        element={
-          <RequireRole allow={["estudiante"]}>
-            <StudentActivitiesPage />
-          </RequireRole>
-        }
-      />
-      <Route
-        path="/dashboard/academico"
-        element={
-          <RequireRole allow={["superadmin", "admin", "control_escolar", "jefe_departamento", "capacitacion"]}>
-            <DashboardAcademico />
-          </RequireRole>
-        }
-      />
-      <Route
-        path="/dashboard/ia"
-        element={
-          <RequireRole allow={["superadmin","admin","control_escolar","jefe_departamento","capacitacion"]}>
-            <DashboardIAPage />
-          </RequireRole>
-        }
-      />
-
-
-
-      {/* Genéricos */}
-      <Route path="/dashboard" element={<RequireAuth><Navigate to="/dashboard/admin" replace /></RequireAuth>} />
+      <Route path="/dashboard" element={<RequireAuth><DashboardRedirect /></RequireAuth>} />
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

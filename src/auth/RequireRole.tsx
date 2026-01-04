@@ -6,24 +6,24 @@ import type { AppRole } from "../services/authService";
 
 function homeByRole(role: AppRole) {
   switch (role) {
-    case "superadmin":
+    case "SUPERADMIN":
       return "/dashboard/superadmin";
-    case "admin":
+    case "ADMIN":
       return "/dashboard/admin";
-    case "control_escolar":
+    case "SERVICIOS_ESCOLARES":
       return "/control-escolar";
-    case "docente":
+    case "DOCENTE":
       return "/docente";
-    case "estudiante":
+    case "ALUMNO":
       return "/estudiante";
-    case "jefe_departamento":
+    case "JEFE":
       return "/jefe-academico";
-    case "tutor":
-      return "/tutor";
-    case "capacitacion":
+    case "SUBDIRECCION":
+      return "/subdireccion";
+    case "DESARROLLO_ACADEMICO":
       return "/desarrollo-academico";
     default:
-      return "/dashboard";
+      return "/dashboard/admin";
   }
 }
 
@@ -31,14 +31,14 @@ export function RequireRole({
   allow,
   children,
 }: {
-  allow: AppRole[]; // roles permitidos
+  allow: AppRole[];
   children: React.ReactNode;
 }) {
   const { user } = useAuth();
 
   return (
     <RequireAuth>
-      {!user ? null : allow.includes(user.role) ? (
+      {!user ? null : user.roles.some((r) => allow.includes(r)) ? (
         <>{children}</>
       ) : (
         <Navigate to={homeByRole(user.role)} replace />

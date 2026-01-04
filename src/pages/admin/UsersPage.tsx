@@ -17,19 +17,28 @@ type UserRow = {
   linkedEntityId?: string | null;
 };
 
+const ROLE_OPTIONS = [
+  "SUPERADMIN",
+  "ADMIN",
+  "SERVICIOS_ESCOLARES",
+  "DOCENTE",
+  "ALUMNO",
+  "JEFE",
+  "SUBDIRECCION",
+  "DESARROLLO_ACADEMICO",
+] as const;
+
 export default function UsersPage() {
   const [rows, setRows] = React.useState<UserRow[]>([]);
   const [error, setError] = React.useState("");
   const [loading, setLoading] = React.useState(false);
 
-  // form create
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
-  const [role, setRole] = React.useState("DOCENTE");
+  const [role, setRole] = React.useState<(typeof ROLE_OPTIONS)[number]>("DOCENTE");
   const [status, setStatus] = React.useState<UserStatus>("active");
   const [linkedEntityId, setLinkedEntityId] = React.useState("");
 
-  // campos para auto-crear docente (si el backend los soporta en CreateUserDto)
   const [teacherName, setTeacherName] = React.useState("");
   const [employeeNumber, setEmployeeNumber] = React.useState("");
 
@@ -177,14 +186,12 @@ export default function UsersPage() {
               <select
                 className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
                 value={role}
-                onChange={(e) => setRole(e.target.value)}
+                onChange={(e) => setRole(e.target.value as any)}
                 disabled={loading}
               >
-                <option value="SUPERADMIN">SUPERADMIN</option>
-                <option value="ADMIN">ADMIN</option>
-                <option value="SERVICIOS_ESCOLARES">SERVICIOS_ESCOLARES</option>
-                <option value="DOCENTE">DOCENTE</option>
-                <option value="ALUMNO">ALUMNO</option>
+                {ROLE_OPTIONS.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
               </select>
             </div>
 
@@ -193,7 +200,7 @@ export default function UsersPage() {
               <Input
                 value={linkedEntityId}
                 onChange={(e) => setLinkedEntityId(e.target.value)}
-                placeholder="Opcional: pega el _id del teacher/student (si lo dejas vacío y es DOCENTE, auto-crea Teacher)"
+                placeholder="Opcional: pega el _id del teacher/student"
                 disabled={loading}
               />
             </div>
@@ -297,11 +304,9 @@ function UserRowItem({
           value={role}
           onChange={(e) => setRole(e.target.value)}
         >
-          <option value="SUPERADMIN">SUPERADMIN</option>
-          <option value="ADMIN">ADMIN</option>
-          <option value="SERVICIOS_ESCOLARES">SERVICIOS_ESCOLARES</option>
-          <option value="DOCENTE">DOCENTE</option>
-          <option value="ALUMNO">ALUMNO</option>
+          {ROLE_OPTIONS.map((r) => (
+            <option key={r} value={r}>{r}</option>
+          ))}
         </select>
       </td>
 

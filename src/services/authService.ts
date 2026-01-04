@@ -1,37 +1,65 @@
 import { api } from "../api/client";
 
 export type AppRole =
-  | "superadmin"
-  | "admin"
-  | "docente"
-  | "estudiante"
-  | "jefe_departamento"
-  | "tutor"
-  | "control_escolar"
-  | "capacitacion";
+  | "SUPERADMIN"
+  | "ADMIN"
+  | "SERVICIOS_ESCOLARES"
+  | "DOCENTE"
+  | "ALUMNO"
+  | "JEFE"
+  | "SUBDIRECCION"
+  | "DESARROLLO_ACADEMICO";
 
 export type AuthUser = {
   id: string;
   email: string;
-  role: AppRole;
-  roles?: string[]; // opcional: roles originales del backend
+  role: AppRole;    
+  roles: AppRole[]; 
 };
 
-function mapBackendRolesToAppRole(roles?: string[]): AppRole {
-  const r = (roles?.[0] || "").toUpperCase();
+const VALID_ROLES: AppRole[] = [
+  "SUPERADMIN",
+  "ADMIN",
+  "SERVICIOS_ESCOLARES",
+  "DOCENTE",
+  "ALUMNO",
+  "JEFE",
+  "SUBDIRECCION",
+  "DESARROLLO_ACADEMICO",
+];
 
-  const map: Record<string, AppRole> = {
-    SUPERADMIN: "superadmin",
-    ADMIN: "admin",
-    DOCENTE: "docente",
-    ALUMNO: "estudiante",
-    JEFE: "jefe_departamento",
-    SUBDIRECCION: "admin",
-    SERVICIOS_ESCOLARES: "control_escolar",
-    DESARROLLO_ACADEMICO: "capacitacion",
-  };
+const VALID_SET = new Set<string>(VALID_ROLES);
 
-  return map[r] ?? "admin";
+function isAppRole(v: string): v is AppRole {
+  return VALID_SET.has(v);
+}
+
+function normalizeRoles(raw: unknown): AppRole[] {
+  const arr = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  const out: AppRole[] = [];
+
+  for (const r of arr) {
+    const up = String(r ?? "").trim().toUpperCase();
+    if (isAppRole(up)) out.push(up);
+  }
+
+  return Array.from(new Set(out));
+}
+
+function pickPrimaryRole(roles: AppRole[]): AppRole {
+
+  const priority: AppRole[] = [
+    "SUPERADMIN",
+    "ADMIN",
+    "SERVICIOS_ESCOLARES",
+    "SUBDIRECCION",
+    "JEFE",
+    "DESARROLLO_ACADEMICO",
+    "DOCENTE",
+    "ALUMNO",
+  ];
+
+  return priority.find((p) => roles.includes(p)) ?? roles[0] ?? "ADMIN";
 }
 
 const authService = {
@@ -44,12 +72,12 @@ const authService = {
     if (!token || !rawUser) {
       throw new Error("Respuesta inválida del servidor (sin token o user).");
     }
-
+    const roles = normalizeRoles(rawUser.roles ?? rawUser.role);
     const user: AuthUser = {
       id: rawUser.id ?? rawUser._id,
       email: rawUser.email,
-      role: rawUser.role ?? mapBackendRolesToAppRole(rawUser.roles),
-      roles: rawUser.roles ?? [],
+      roles,
+      role: pickPrimaryRole(roles),
     };
 
     localStorage.setItem("token", token);

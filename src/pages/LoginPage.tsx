@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../co
 import { Input } from "../components/input";
 import { Label } from "../components/label";
 import { Alert, AlertDescription } from "../components/alert";
-import { Eye, EyeOff, Shield, Users, BarChart3 } from "lucide-react";
+import { Eye, EyeOff, BarChart3 } from "lucide-react";
 import logo from "../assets/image.png";
 import { Checkbox } from "../components/checkbox";
 import authService from "../services/authService";
@@ -49,42 +49,37 @@ export default function LoginPage() {
         return;
       }
 
-      // Si quieres diferenciar rememberMe:
-      // - true: localStorage (ya lo hace authService)
-      // - false: sessionStorage (requeriría cambiar authService)
-      // Por ahora lo dejamos como está para estabilidad.
-
       setSession(token, user);
 
-      let redirectPath = "/dashboard";
+      let redirectPath = "/dashboard/admin";
 
       switch (user.role) {
-        case "superadmin":
+        case "SUPERADMIN":
           redirectPath = "/dashboard/superadmin";
           break;
-        case "admin":
+        case "ADMIN":
           redirectPath = "/dashboard/admin";
           break;
-        case "docente":
-          redirectPath = "/docente";
-          break;
-        case "estudiante":
-          redirectPath = "/estudiante";
-          break;
-        case "jefe_departamento":
-          redirectPath = "/jefe-academico";
-          break;
-        case "tutor":
-          redirectPath = "/tutor";
-          break;
-        case "control_escolar":
+        case "SERVICIOS_ESCOLARES":
           redirectPath = "/control-escolar";
           break;
-        case "capacitacion":
+        case "DOCENTE":
+          redirectPath = "/docente";
+          break;
+        case "ALUMNO":
+          redirectPath = "/estudiante";
+          break;
+        case "JEFE":
+          redirectPath = "/jefe-academico";
+          break;
+        case "SUBDIRECCION":
+          redirectPath = "/subdireccion";
+          break;
+        case "DESARROLLO_ACADEMICO":
           redirectPath = "/desarrollo-academico";
           break;
         default:
-          redirectPath = "/dashboard";
+          redirectPath = "/dashboard/admin";
       }
 
       navigate(redirectPath, { replace: true });
@@ -103,7 +98,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Lado izquierdo - Formulario */}
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md space-y-6">
           <div className="text-center space-y-2">
@@ -129,7 +123,6 @@ export default function LoginPage() {
                   </Alert>
                 )}
 
-                {/* Email */}
                 <div className="space-y-2">
                   <Label htmlFor="email">Correo Electrónico</Label>
                   <Input
@@ -144,7 +137,6 @@ export default function LoginPage() {
                   />
                 </div>
 
-                {/* Password */}
                 <div className="space-y-2">
                   <Label htmlFor="password">Contraseña</Label>
                   <div className="relative">
@@ -166,16 +158,11 @@ export default function LoginPage() {
                       onClick={() => setShowPassword(!showPassword)}
                       disabled={isLoading}
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                      )}
+                      {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
                     </Button>
                   </div>
                 </div>
 
-                {/* Recordarme */}
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="remember"
@@ -183,12 +170,9 @@ export default function LoginPage() {
                     onCheckedChange={(checked) => setRememberMe(Boolean(checked))}
                     disabled={isLoading}
                   />
-                  <Label htmlFor="remember" className="text-sm">
-                    Recordarme
-                  </Label>
+                  <Label htmlFor="remember" className="text-sm">Recordarme</Label>
                 </div>
 
-                {/* Términos */}
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="terms"
@@ -222,7 +206,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Lado derecho - Información */}
       <div className="hidden lg:flex flex-1 bg-muted/50 items-center justify-center p-8">
         <div className="max-w-md space-y-8">
           <div className="text-center space-y-4">
@@ -238,31 +221,12 @@ export default function LoginPage() {
                 <BarChart3 className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold text-foreground mb-1">Tablero de Indicadores</h3>
-                <p className="text-sm text-muted-foreground">Visualiza métricas académicas en tiempo real</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Users className="w-6 h-6 text-accent" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-foreground mb-1">Gestión Integral</h3>
-                <p className="text-sm text-muted-foreground">Administra estudiantes, docentes y recursos académicos</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-secondary/15 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Shield className="w-6 h-6 text-secondary" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-foreground mb-1">Seguridad Avanzada</h3>
-                <p className="text-sm text-muted-foreground">Protección de datos institucionales con altos estándares</p>
+                <h3 className="font-semibold text-foreground">Analítica y reportes</h3>
+                <p className="text-sm text-muted-foreground">Dashboards académicos e IA para decisiones rápidas</p>
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>
