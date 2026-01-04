@@ -18,26 +18,29 @@ type ClassAssignment = {
   status?: "active" | "inactive";
 };
 
+type UnitGrades = { u1?: number; u2?: number; u3?: number; u4?: number; u5?: number };
+
 type CourseEnrollment = {
   _id: string;
   studentId?: any;
   status?: "active" | "inactive";
+  unitGrades?: UnitGrades;
   finalGrade?: number | null;
 };
 
-function csvEscape(v: any) {
-  const s = String(v ?? "");
-  const needsQuotes = /[",\n]/.test(s);
-  const cleaned = s.replace(/"/g, '""');
-  return needsQuotes ? `"${cleaned}"` : cleaned;
-}
+function downloadCSV(filename: string, rows: Array<Record<string, any>>) {
+  const headers = Object.keys(rows[0] ?? {});
+  const esc = (v: any) => {
+    const s = String(v ?? "");
+    const needsQuotes = /[",\n]/.test(s);
+    const cleaned = s.replace(/"/g, '""');
+    return needsQuotes ? `"${cleaned}"` : cleaned;
+  };
 
-// BOM para Excel (acentos bien)
-function downloadTextFile(filename: string, text: string, mime = "text/csv;charset=utf-8;") {
-  const bom = "\uFEFF";
-  const blob = new Blob([bom + text], { type: mime });
+  const csv = [headers.join(","), ...rows.map((r) => headers.map((h) => esc(r[h])).join(","))].join("\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
-
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
@@ -47,146 +50,18 @@ function downloadTextFile(filename: string, text: string, mime = "text/csv;chars
   URL.revokeObjectURL(url);
 }
 
-function downloadCSV(filename: string, rows: Array<Record<string, any>>) {
-  if (!rows || rows.length === 0) return;
-  const headers = Object.keys(rows[0] ?? {});
-  const csv = [headers.join(","), ...rows.map((r) => headers.map((h) => csvEscape(r[h])).join(","))].join("\n");
-  downloadTextFile(filename, csv);
+function normalizeNum(v: string): number | undefined {
+  const s = String(v ?? "").trim();
+  if (!s) return undefined;
+  const n = Number(s);
+  if (!Number.isFinite(n)) return undefined;
+  return n;
 }
 
-function safeFilename(s: string) {
-  const plain = String(s ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-  return plain
-    .replace(/[^a-zA-Z0-9-_ ]/g, "")
-    .trim()
-    .replace(/\s+/g, "_")
-    .toLowerCase();
-}
-
-function isValidGrade(n: number) {
-  return Number.isFinite(n) && n >= 0 && n <= 100;
-}
-
-/**
- * Lista de asistencia (ya la tenías) estilo plantilla simple (CSV).
- */
-function exportAttendanceGrid(params: {
-  institutionName: string;
-  periodName: string;
-  teacherName: string;
-  subjectName: string;
-  groupName: string;
-  enrollments: CourseEnrollment[];
-  weeks?: number;
-}) {
-  const weeks = params.weeks ?? 4;
-
-  const sorted = [...(params.enrollments ?? [])].sort((a, b) => {
-    const an = String(a?.studentId?.name ?? "").trim().toLowerCase();
-    const bn = String(b?.studentId?.name ?? "").trim().toLowerCase();
-    return an.localeCompare(bn, "es", { sensitivity: "base" });
-  });
-
-  const cols: string[] = ["No.", "NOMBRE DEL ALUMNO"];
-  for (let w = 0; w < weeks; w++) cols.push("L", "M", "M", "J", "V");
-  cols.push("T");
-
-  const width = cols.length;
-  const blankRow = () => new Array(width).fill("");
-
-  const lines: string[] = [];
-
-  const inst = blankRow();
-  inst[0] = params.institutionName;
-  lines.push(inst.map(csvEscape).join(","));
-
-  const meta = blankRow();
-  meta[0] = "DOCENTE:";
-  meta[1] = params.teacherName;
-
-  meta[5] = "GRUPO:";
-  meta[6] = params.groupName;
-
-  meta[12] = "PERIODO:";
-  meta[13] = params.periodName;
-
-  meta[17] = "MATERIA:";
-  meta[18] = params.subjectName;
-
-  lines.push(meta.map(csvEscape).join(","));
-  lines.push(blankRow().join(","));
-  lines.push(cols.map(csvEscape).join(","));
-
-  sorted.forEach((e, idx) => {
-    const st = e.studentId ?? {};
-    const row = blankRow();
-    row[0] = String(idx + 1);
-    row[1] = String(st.name ?? "");
-    lines.push(row.map(csvEscape).join(","));
-  });
-
-  const filename = `asistencia_${safeFilename(params.groupName)}_${safeFilename(params.subjectName)}_${safeFilename(
-    params.periodName,
-  )}.csv`;
-
-  downloadTextFile(filename, lines.join("\n"));
-}
-
-/**
- * ✅ Reporte de calificaciones (CSV) con encabezado institucional.
- */
-function exportGradesReport(params: {
-  institutionName: string;
-  periodName: string;
-  teacherName: string;
-  subjectName: string;
-  subjectCode?: string;
-  groupName: string;
-  enrollments: CourseEnrollment[];
-}) {
-  const sorted = [...(params.enrollments ?? [])].sort((a, b) => {
-    const an = String(a?.studentId?.name ?? "").trim().toLowerCase();
-    const bn = String(b?.studentId?.name ?? "").trim().toLowerCase();
-    return an.localeCompare(bn, "es", { sensitivity: "base" });
-  });
-
-  // Encabezado tipo hoja + tabla
-  const lines: string[] = [];
-
-  const subjectLabel = `${params.subjectCode ? params.subjectCode + " - " : ""}${params.subjectName}`;
-
-  lines.push([params.institutionName].map(csvEscape).join(","));
-  lines.push(["REPORTE DE CALIFICACIONES"].map(csvEscape).join(","));
-  lines.push([""].join(","));
-
-  lines.push([`PERIODO: ${params.periodName}`].map(csvEscape).join(","));
-  lines.push([`DOCENTE: ${params.teacherName}`].map(csvEscape).join(","));
-  lines.push([`MATERIA: ${subjectLabel}`].map(csvEscape).join(","));
-  lines.push([`GRUPO: ${params.groupName}`].map(csvEscape).join(","));
-  lines.push([""].join(","));
-
-  const header = ["No.", "No. Control", "Nombre del alumno", "Calificación final"];
-  lines.push(header.map(csvEscape).join(","));
-
-  sorted.forEach((e, idx) => {
-    const st = e.studentId ?? {};
-    const grade =
-      e.finalGrade === null || e.finalGrade === undefined || Number.isNaN(Number(e.finalGrade))
-        ? ""
-        : String(e.finalGrade);
-
-    lines.push(
-      [String(idx + 1), String(st.controlNumber ?? ""), String(st.name ?? ""), grade].map(csvEscape).join(","),
-    );
-  });
-
-  const filename = `calificaciones_${safeFilename(params.groupName)}_${safeFilename(subjectLabel)}_${safeFilename(
-    params.periodName,
-  )}.csv`;
-
-  downloadTextFile(filename, lines.join("\n"));
+function gradeStatus(finalGrade: number | null | undefined) {
+  if (typeof finalGrade !== "number") return { label: "Sin final", cls: "bg-muted text-foreground" };
+  if (finalGrade >= 70) return { label: "Aprobado", cls: "bg-emerald-100 text-emerald-900" };
+  return { label: "Reprobado", cls: "bg-red-100 text-red-900" };
 }
 
 export default function MisCargasDocente() {
@@ -199,10 +74,15 @@ export default function MisCargasDocente() {
   const [q, setQ] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
-  const [info, setInfo] = React.useState("");
 
-  const [gradeDraft, setGradeDraft] = React.useState<Record<string, string>>({});
+  // Edición local de calificaciones
+  const [edits, setEdits] = React.useState<Record<string, { u1: string; u2: string; u3: string; u4: string; u5: string }>>(
+    {}
+  );
+  const [savingId, setSavingId] = React.useState<string>(""); // guarda por fila
+  const [savingAll, setSavingAll] = React.useState(false);
 
+  // Periodos + activo
   React.useEffect(() => {
     (async () => {
       setError("");
@@ -219,13 +99,13 @@ export default function MisCargasDocente() {
     })();
   }, []);
 
+  // Mis cargas por periodo
   const loadMyLoads = React.useCallback(async () => {
     setError("");
-    setInfo("");
     setClassAssignments([]);
     setSelected(null);
     setEnrollments([]);
-    setGradeDraft({});
+    setEdits({});
 
     if (!periodId) return;
 
@@ -236,7 +116,7 @@ export default function MisCargasDocente() {
     } catch (e: any) {
       setError(
         e?.response?.data?.message ??
-          "Error al cargar mis cargas. Verifica que exista GET /academic/class-assignments/me en backend.",
+          "Error al cargar mis cargas. Verifica que exista GET /academic/class-assignments/me en backend."
       );
     } finally {
       setLoading(false);
@@ -247,39 +127,47 @@ export default function MisCargasDocente() {
     loadMyLoads();
   }, [loadMyLoads]);
 
+  // Alumnos inscritos de una carga
   const loadStudents = React.useCallback(
     async (ca: ClassAssignment) => {
       setError("");
-      setInfo("");
       setSelected(ca);
       setEnrollments([]);
-      setGradeDraft({});
+      setEdits({});
       if (!periodId) return;
 
       setLoading(true);
       try {
         const res = await api.get("/academic/course-enrollments/me", {
-          params: { periodId, classAssignmentId: ca._id },
+          params: { periodId, classAssignmentId: ca._id, status: "active" },
         });
 
         const list: CourseEnrollment[] = res.data ?? [];
         setEnrollments(list);
 
-        const drafts: Record<string, string> = {};
+        // Inicializa edición desde backend
+        const nextEdits: any = {};
         for (const e of list) {
-          drafts[e._id] = e.finalGrade === null || e.finalGrade === undefined ? "" : String(e.finalGrade);
+          const ug = e.unitGrades ?? {};
+          nextEdits[e._id] = {
+            u1: ug.u1 === undefined ? "" : String(ug.u1),
+            u2: ug.u2 === undefined ? "" : String(ug.u2),
+            u3: ug.u3 === undefined ? "" : String(ug.u3),
+            u4: ug.u4 === undefined ? "" : String(ug.u4),
+            u5: ug.u5 === undefined ? "" : String(ug.u5),
+          };
         }
-        setGradeDraft(drafts);
+        setEdits(nextEdits);
       } catch (e: any) {
         setError(
           e?.response?.data?.message ??
-            "Error al cargar alumnos. Verifica que exista GET /academic/course-enrollments/me en backend.",
+            "Error al cargar alumnos. Verifica que exista GET /academic/course-enrollments/me en backend."
         );
       } finally {
         setLoading(false);
       }
     },
-    [periodId],
+    [periodId]
   );
 
   const filtered = React.useMemo(() => {
@@ -294,160 +182,105 @@ export default function MisCargasDocente() {
     });
   }, [enrollments, q]);
 
-  const exportRoster = () => {
-    if (!selected) return;
-    if (!enrollments || enrollments.length === 0) return;
-
-    const rows = [...enrollments].sort((a, b) => {
-      const an = String(a?.studentId?.name ?? "").trim().toLowerCase();
-      const bn = String(b?.studentId?.name ?? "").trim().toLowerCase();
-      return an.localeCompare(bn, "es", { sensitivity: "base" });
-    });
-
-    const data = rows.map((e) => {
-      const st = e.studentId ?? {};
-      return {
-        controlNumber: st.controlNumber ?? "",
-        name: st.name ?? "",
-        finalGrade: e.finalGrade ?? "",
-        subject: selected.subjectId?.name ?? "",
-        group: selected.groupId?.name ?? "",
-        period: periods.find((p) => p._id === periodId)?.name ?? "",
-      };
-    });
-
-    const filename = `lista_${safeFilename(selected.groupId?.name ?? "grupo")}_${safeFilename(
-      selected.subjectId?.name ?? "materia",
-    )}.csv`;
-
-    downloadCSV(filename, data);
+  const setEditField = (enrollmentId: string, key: "u1" | "u2" | "u3" | "u4" | "u5", value: string) => {
+    setEdits((prev) => ({
+      ...prev,
+      [enrollmentId]: {
+        ...(prev[enrollmentId] ?? { u1: "", u2: "", u3: "", u4: "", u5: "" }),
+        [key]: value,
+      },
+    }));
   };
 
-  const downloadAttendance = () => {
+  const saveRow = async (enrollmentId: string) => {
     if (!selected) return;
-    if (!enrollments || enrollments.length === 0) return;
+    const rowEdit = edits[enrollmentId];
+    if (!rowEdit) return;
 
-    const institutionName = "Tecnológico Nacional de México — Campus Matehuala";
-    const periodName = periods.find((p) => p._id === periodId)?.name ?? "";
-    const teacherName = selected.teacherId?.name ?? "";
-    const subjectName = selected.subjectId?.name ?? "";
-    const groupName = selected.groupId?.name ?? "";
-
-    exportAttendanceGrid({
-      institutionName,
-      periodName,
-      teacherName,
-      subjectName,
-      groupName,
-      enrollments,
-      weeks: 4,
-    });
-  };
-
-  const downloadGradesReport = () => {
-    if (!selected) return;
-    if (!enrollments || enrollments.length === 0) return;
-
-    const institutionName = "Tecnológico Nacional de México — Campus Matehuala";
-    const periodName = periods.find((p) => p._id === periodId)?.name ?? "";
-    const teacherName = selected.teacherId?.name ?? "";
-    const subjectName = selected.subjectId?.name ?? "";
-    const subjectCode = selected.subjectId?.code ?? "";
-    const groupName = selected.groupId?.name ?? "";
-
-    exportGradesReport({
-      institutionName,
-      periodName,
-      teacherName,
-      subjectName,
-      subjectCode,
-      groupName,
-      enrollments,
-    });
-  };
-
-  const saveOne = async (courseEnrollmentId: string) => {
     setError("");
-    setInfo("");
-
-    const raw = (gradeDraft[courseEnrollmentId] ?? "").trim();
-
-    let finalGrade: number | null = null;
-    if (raw !== "") {
-      const n = Number(raw);
-      if (!isValidGrade(n)) {
-        setError("Calificación inválida. Debe ser un número entre 0 y 100.");
-        return;
-      }
-      finalGrade = n;
-    }
-
-    setLoading(true);
+    setSavingId(enrollmentId);
     try {
-      await api.patch(`/academic/course-enrollments/${courseEnrollmentId}`, { finalGrade });
-      setEnrollments((prev) => prev.map((e) => (e._id === courseEnrollmentId ? { ...e, finalGrade } : e)));
+      const payload: any = { unitGrades: {}, computeFinal: true };
 
-      setInfo("Calificación guardada.");
-      setTimeout(() => setInfo(""), 1200);
+      const u1 = normalizeNum(rowEdit.u1); if (u1 !== undefined) payload.unitGrades.u1 = u1;
+      const u2 = normalizeNum(rowEdit.u2); if (u2 !== undefined) payload.unitGrades.u2 = u2;
+      const u3 = normalizeNum(rowEdit.u3); if (u3 !== undefined) payload.unitGrades.u3 = u3;
+      const u4 = normalizeNum(rowEdit.u4); if (u4 !== undefined) payload.unitGrades.u4 = u4;
+      const u5 = normalizeNum(rowEdit.u5); if (u5 !== undefined) payload.unitGrades.u5 = u5;
+
+      const res = await api.patch(`/academic/course-enrollments/${enrollmentId}/grades`, payload);
+
+      // Actualiza fila local con respuesta del backend
+      const updated: CourseEnrollment = res.data;
+      setEnrollments((prev) => prev.map((e) => (e._id === enrollmentId ? updated : e)));
+
+      // Re-sincroniza edits para mantener consistencia (si backend redondea)
+      const ug = updated.unitGrades ?? {};
+      setEdits((prev) => ({
+        ...prev,
+        [enrollmentId]: {
+          u1: ug.u1 === undefined ? "" : String(ug.u1),
+          u2: ug.u2 === undefined ? "" : String(ug.u2),
+          u3: ug.u3 === undefined ? "" : String(ug.u3),
+          u4: ug.u4 === undefined ? "" : String(ug.u4),
+          u5: ug.u5 === undefined ? "" : String(ug.u5),
+        },
+      }));
     } catch (e: any) {
-      const msg = e?.response?.data?.message ?? "Error al guardar calificación";
-      setError(Array.isArray(msg) ? msg.join(" | ") : msg);
+      setError(e?.response?.data?.message ?? "Error al guardar calificaciones");
     } finally {
-      setLoading(false);
+      setSavingId("");
     }
   };
 
   const saveAll = async () => {
     if (!selected) return;
     setError("");
-    setInfo("");
-
-    setLoading(true);
+    setSavingAll(true);
     try {
+      // Guardado secuencial para evitar saturar backend
       for (const e of enrollments) {
-        const raw = (gradeDraft[e._id] ?? "").trim();
-        let finalGrade: number | null = null;
-
-        if (raw !== "") {
-          const n = Number(raw);
-          if (!isValidGrade(n)) {
-            throw new Error(`Calificación inválida para ${e.studentId?.controlNumber ?? "alumno"} (0..100)`);
-          }
-          finalGrade = n;
-        }
-
-        const current = e.finalGrade ?? null;
-        const changed =
-          (current === null && finalGrade !== null) ||
-          (current !== null && finalGrade === null) ||
-          current !== finalGrade;
-
-        if (!changed) continue;
-
-        await api.patch(`/academic/course-enrollments/${e._id}`, { finalGrade });
-        setEnrollments((prev) => prev.map((x) => (x._id === e._id ? { ...x, finalGrade } : x)));
+        await saveRow(e._id);
       }
-
-      setInfo("Cambios guardados.");
-      setTimeout(() => setInfo(""), 1500);
-    } catch (err: any) {
-      setError(String(err?.message ?? err ?? "Error al guardar todo"));
     } finally {
-      setLoading(false);
+      setSavingAll(false);
     }
   };
 
+  const exportSelectedGrades = () => {
+    if (!selected) return;
+
+    const rows = (enrollments ?? []).map((e) => {
+      const st = e.studentId ?? {};
+      const ug = e.unitGrades ?? {};
+      return {
+        controlNumber: st.controlNumber ?? "",
+        name: st.name ?? "",
+        subject: selected.subjectId?.name ?? "",
+        group: selected.groupId?.name ?? "",
+        u1: ug.u1 ?? "",
+        u2: ug.u2 ?? "",
+        u3: ug.u3 ?? "",
+        u4: ug.u4 ?? "",
+        u5: ug.u5 ?? "",
+        finalGrade: e.finalGrade ?? "",
+      };
+    });
+
+    if (rows.length === 0) return;
+
+    const filename = `calificaciones_${selected.subjectId?.name ?? "materia"}_${selected.groupId?.name ?? "grupo"}.csv`
+      .replace(/\s+/g, "_")
+      .toLowerCase();
+
+    downloadCSV(filename, rows);
+  };
+
   return (
-    <DashboardLayout title="Mis cargas">
+    <DashboardLayout title="Mis cargas (Calificaciones por unidad)">
       {error ? (
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{String(error)}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      {info ? (
-        <Alert className="mb-4">
-          <AlertDescription>{String(info)}</AlertDescription>
         </Alert>
       ) : null}
 
@@ -475,10 +308,11 @@ export default function MisCargasDocente() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
+        {/* Lista de cargas */}
         <Card>
           <CardHeader>
             <CardTitle>Mis cargas del periodo</CardTitle>
-            <CardDescription>Selecciona una carga para ver alumnos y exportar reportes.</CardDescription>
+            <CardDescription>Selecciona una carga para capturar calificaciones.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="overflow-auto border border-border rounded-lg">
@@ -514,7 +348,7 @@ export default function MisCargasDocente() {
                           <td className="p-3">{ca.careerId?.name ?? "-"}</td>
                           <td className="p-3">
                             <Button onClick={() => loadStudents(ca)} disabled={loading}>
-                              Ver alumnos
+                              Calificar
                             </Button>
                           </td>
                         </tr>
@@ -527,18 +361,19 @@ export default function MisCargasDocente() {
           </CardContent>
         </Card>
 
+        {/* Alumnos de la carga seleccionada */}
         <Card>
           <CardHeader>
-            <CardTitle>Alumnos inscritos</CardTitle>
+            <CardTitle>Captura por alumno</CardTitle>
             <CardDescription>
               {selected
                 ? `${selected.subjectId?.name ?? "Materia"} — ${selected.groupId?.name ?? "Grupo"}`
-                : "Selecciona una carga para ver su lista."}
+                : "Selecciona una carga para capturar calificaciones."}
             </CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-3">
-            <div className="flex gap-2 items-center flex-wrap">
+            <div className="flex gap-2 items-center">
               <Input
                 placeholder="Buscar por No. Control o nombre"
                 value={q}
@@ -546,23 +381,11 @@ export default function MisCargasDocente() {
                 disabled={!selected}
               />
 
-              <Button variant="secondary" onClick={exportRoster} disabled={!selected || enrollments.length === 0}>
-                Descargar lista (CSV)
+              <Button variant="secondary" onClick={exportSelectedGrades} disabled={!selected || enrollments.length === 0}>
+                Exportar CSV (calificaciones)
               </Button>
 
-              <Button variant="secondary" onClick={downloadAttendance} disabled={!selected || enrollments.length === 0}>
-                Descargar asistencia
-              </Button>
-
-              <Button
-                variant="secondary"
-                onClick={downloadGradesReport}
-                disabled={!selected || enrollments.length === 0}
-              >
-                Descargar reporte de calificaciones
-              </Button>
-
-              <Button onClick={saveAll} disabled={!selected || enrollments.length === 0 || loading}>
+              <Button onClick={saveAll} disabled={!selected || enrollments.length === 0 || savingAll}>
                 Guardar todo
               </Button>
             </div>
@@ -573,57 +396,73 @@ export default function MisCargasDocente() {
                   <tr>
                     <th className="text-left p-3">No. Control</th>
                     <th className="text-left p-3">Nombre</th>
-                    <th className="text-left p-3 w-[160px]">Final (0–100)</th>
-                    <th className="text-left p-3 w-[120px]">Acción</th>
+                    <th className="text-left p-3">U1</th>
+                    <th className="text-left p-3">U2</th>
+                    <th className="text-left p-3">U3</th>
+                    <th className="text-left p-3">U4</th>
+                    <th className="text-left p-3">U5</th>
+                    <th className="text-left p-3">Final</th>
+                    <th className="text-left p-3">Estado</th>
+                    <th className="text-left p-3">Acción</th>
                   </tr>
                 </thead>
-
                 <tbody>
                   {!selected ? (
                     <tr>
-                      <td colSpan={4} className="p-4 text-muted-foreground">
+                      <td colSpan={10} className="p-4 text-muted-foreground">
                         Selecciona una carga.
                       </td>
                     </tr>
                   ) : filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="p-4 text-muted-foreground">
+                      <td colSpan={10} className="p-4 text-muted-foreground">
                         Sin alumnos inscritos (o no coincide la búsqueda).
                       </td>
                     </tr>
                   ) : (
-                    filtered
-                      .slice()
-                      .sort((a, b) => {
-                        const an = String(a?.studentId?.name ?? "").trim().toLowerCase();
-                        const bn = String(b?.studentId?.name ?? "").trim().toLowerCase();
-                        return an.localeCompare(bn, "es", { sensitivity: "base" });
-                      })
-                      .map((e) => {
-                        const st = e.studentId ?? {};
-                        return (
-                          <tr key={e._id} className="border-t border-border">
-                            <td className="p-3">{st.controlNumber ?? "-"}</td>
-                            <td className="p-3 font-medium">{st.name ?? "-"}</td>
-                            <td className="p-3">
+                    filtered.map((e) => {
+                      const st = e.studentId ?? {};
+                      const rowEdit = edits[e._id] ?? { u1: "", u2: "", u3: "", u4: "", u5: "" };
+                      const gs = gradeStatus(e.finalGrade);
+
+                      return (
+                        <tr key={e._id} className="border-t border-border">
+                          <td className="p-3">{st.controlNumber ?? "-"}</td>
+                          <td className="p-3 font-medium">{st.name ?? "-"}</td>
+
+                          {(["u1", "u2", "u3", "u4", "u5"] as const).map((k) => (
+                            <td key={k} className="p-3">
                               <Input
                                 type="number"
                                 min={0}
                                 max={100}
-                                step="1"
-                                value={gradeDraft[e._id] ?? ""}
-                                onChange={(ev) => setGradeDraft((prev) => ({ ...prev, [e._id]: ev.target.value }))}
-                                disabled={loading}
+                                value={rowEdit[k]}
+                                onChange={(ev) => setEditField(e._id, k, ev.target.value)}
+                                className="h-9 w-20"
                               />
                             </td>
-                            <td className="p-3">
-                              <Button variant="secondary" onClick={() => saveOne(e._id)} disabled={loading}>
-                                Guardar
-                              </Button>
-                            </td>
-                          </tr>
-                        );
-                      })
+                          ))}
+
+                          <td className="p-3 font-medium">{typeof e.finalGrade === "number" ? e.finalGrade : "-"}</td>
+
+                          <td className="p-3">
+                            <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${gs.cls}`}>
+                              {gs.label}
+                            </span>
+                          </td>
+
+                          <td className="p-3">
+                            <Button
+                              variant="secondary"
+                              onClick={() => saveRow(e._id)}
+                              disabled={savingId === e._id || savingAll}
+                            >
+                              {savingId === e._id ? "Guardando..." : "Guardar"}
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

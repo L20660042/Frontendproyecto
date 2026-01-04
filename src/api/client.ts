@@ -16,7 +16,6 @@ function getToken() {
 api.interceptors.request.use((config) => {
   const token = getToken();
 
-  // Endpoints públicos (NO deben llevar Authorization)
   const url = config.url ?? "";
   const isPublicAuth =
     url.includes("/auth/login") ||
@@ -27,7 +26,6 @@ api.interceptors.request.use((config) => {
   if (token && !isPublicAuth) {
     (config.headers as any)["Authorization"] = `Bearer ${token}`;
   } else {
-    // por si axios reutiliza headers en ciertos flujos
     delete (config.headers as any)["Authorization"];
   }
 

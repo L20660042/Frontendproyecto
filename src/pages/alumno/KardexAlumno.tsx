@@ -5,31 +5,99 @@ import { Alert, AlertDescription } from "../../components/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/card";
 import { Button } from "../../components/button";
 import { Input } from "../../components/input";
+import { Label } from "../../components/label";
+
+// Gráficas
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  PieChart,
+  Pie,
+  Legend,
+} from "recharts";
 
 type Period = { _id: string; name: string; isActive: boolean };
 
-type Row = {
+type KardexRow = {
   _id: string;
-  status?: "active" | "inactive";
-  finalGrade?: number | null;
-  subjectId?: any;
-  teacherId?: any;
-  groupId?: any;
-  classAssignmentId?: any;
+  subjectCode: string;
+  subjectName: string;
+  teacherName: string;
+  groupName: string;
+  unitGrades: { u1?: number; u2?: number; u3?: number; u4?: number; u5?: number };
+  finalGrade: number | null;
+  status: "active" | "inactive";
 };
 
-function csvEscape(v: any) {
-  const s = String(v ?? "");
-  const needsQuotes = /[",\n]/.test(s);
-  const cleaned = s.replace(/"/g, '""');
-  return needsQuotes ? `"${cleaned}"` : cleaned;
+type KardexResponse = {
+  periodId: string;
+  periodName: string;
+  summary: {
+    total: number;
+    withFinal: number;
+    avgFinal: number | null;
+    passed: number;
+    failed: number;
+    incomplete: number;
+    passThreshold: number;
+  };
+  rows: KardexRow[];
+};
+
+function toCSV(rows: KardexRow[], periodName: string) {
+  const headers = [
+    "Periodo",
+    "Clave",
+    "Materia",
+    "Grupo",
+    "Docente",
+    "U1",
+    "U2",
+    "U3",
+    "U4",
+    "U5",
+    "Final",
+  ];
+
+  const esc = (v: any) => {
+    const s = String(v ?? "");
+    const needsQuotes = /[",\n]/.test(s);
+    const cleaned = s.replace(/"/g, '""');
+    return needsQuotes ? `"${cleaned}"` : cleaned;
+  };
+
+  const lines = [
+    headers.join(","),
+    ...rows.map((r) =>
+      [
+        periodName,
+        r.subjectCode,
+        r.subjectName,
+        r.groupName,
+        r.teacherName,
+        r.unitGrades?.u1 ?? "",
+        r.unitGrades?.u2 ?? "",
+        r.unitGrades?.u3 ?? "",
+        r.unitGrades?.u4 ?? "",
+        r.unitGrades?.u5 ?? "",
+        r.finalGrade ?? "",
+      ]
+        .map(esc)
+        .join(",")
+    ),
+  ];
+
+  return lines.join("\n");
 }
 
-function downloadTextFile(filename: string, text: string, mime = "text/csv;charset=utf-8;") {
-  const bom = "\uFEFF";
-  const blob = new Blob([bom + text], { type: mime });
+function downloadCSV(filename: string, content: string) {
+  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
-
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
@@ -39,26 +107,15 @@ function downloadTextFile(filename: string, text: string, mime = "text/csv;chars
   URL.revokeObjectURL(url);
 }
 
-function safeFilename(s: string) {
-  const plain = String(s ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-  return plain
-    .replace(/[^a-zA-Z0-9-_ ]/g, "")
-    .trim()
-    .replace(/\s+/g, "_")
-    .toLowerCase();
-}
-
 export default function KardexAlumno() {
   const [periods, setPeriods] = React.useState<Period[]>([]);
   const [periodId, setPeriodId] = React.useState("");
-  const [rows, setRows] = React.useState<Row[]>([]);
-  const [q, setQ] = React.useState("");
-  const [error, setError] = React.useState("");
-  const [loading, setLoading] = React.useState(false);
 
-  const selectedPeriod = React.useMemo(() => periods.find((p) => p._id === periodId) ?? null, [periods, periodId]);
+  const [q, setQ] = React.useState("");
+  const [data, setData] = React.useState<KardexResponse | null>(null);
+
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
 
   React.useEffect(() => {
     (async () => {
@@ -75,174 +132,209 @@ export default function KardexAlumno() {
     })();
   }, []);
 
-  React.useEffect(() => {
-    (async () => {
-      setError("");
-      setRows([]);
-      if (!periodId) return;
+  const load = React.useCallback(async () => {
+    setError("");
+    setData(null);
+    if (!periodId) return;
 
-      setLoading(true);
-      try {
-        // Kardex del periodo: intenta traer todo lo del periodo.
-        // Si tu backend sólo devuelve activos, igual funciona como MVP del periodo.
-        const res = await api.get("/academic/course-enrollments/me", { params: { periodId } });
-        setRows(res.data ?? []);
-      } catch (e: any) {
-        setError(e?.response?.data?.message ?? "Error al cargar kardex");
-      } finally {
-        setLoading(false);
-      }
-    })();
+    setLoading(true);
+    try {
+      const res = await api.get("/academic/course-enrollments/me/kardex", { params: { periodId } });
+      setData(res.data);
+    } catch (e: any) {
+      setError(e?.response?.data?.message ?? "Error al cargar kardex");
+    } finally {
+      setLoading(false);
+    }
   }, [periodId]);
 
-  const filtered = React.useMemo(() => {
+  React.useEffect(() => {
+    load();
+  }, [load]);
+
+  const rows = React.useMemo(() => {
+    const list = data?.rows ?? [];
     const s = q.trim().toLowerCase();
-    if (!s) return rows;
-    return rows.filter((r) => {
-      const sub = r.subjectId ?? r.classAssignmentId?.subjectId ?? {};
-      const tea = r.teacherId ?? r.classAssignmentId?.teacherId ?? {};
-      const grp = r.groupId ?? r.classAssignmentId?.groupId ?? {};
-      return (
-        String(sub?.code ?? "").toLowerCase().includes(s) ||
-        String(sub?.name ?? "").toLowerCase().includes(s) ||
-        String(tea?.name ?? "").toLowerCase().includes(s) ||
-        String(grp?.name ?? "").toLowerCase().includes(s)
-      );
+    if (!s) return list;
+    return list.filter((r) => {
+      const m = `${r.subjectCode} ${r.subjectName} ${r.teacherName} ${r.groupName}`.toLowerCase();
+      return m.includes(s);
     });
-  }, [rows, q]);
+  }, [data, q]);
 
-  const metrics = React.useMemo(() => {
-    const graded = rows.filter((r) => r.finalGrade !== null && r.finalGrade !== undefined && !Number.isNaN(Number(r.finalGrade)));
-    const avg =
-      graded.length === 0
-        ? null
-        : graded.reduce((acc, r) => acc + Number(r.finalGrade), 0) / graded.length;
+  const barData = React.useMemo(() => {
+    // solo materias con final
+    return (data?.rows ?? [])
+      .filter((r) => typeof r.finalGrade === "number")
+      .map((r) => ({
+        name: r.subjectCode || r.subjectName,
+        final: r.finalGrade as number,
+      }));
+  }, [data]);
 
-    return {
-      total: rows.length,
-      graded: graded.length,
-      pending: rows.length - graded.length,
-      avg: avg === null ? null : Math.round(avg * 100) / 100,
-    };
-  }, [rows]);
+  const pieData = React.useMemo(() => {
+    const s = data?.summary;
+    if (!s) return [];
+    return [
+      { name: "Aprobadas", value: s.passed },
+      { name: "Reprobadas", value: s.failed },
+      { name: "Incompletas", value: s.incomplete },
+    ];
+  }, [data]);
 
-  const downloadCsv = () => {
-    if (!selectedPeriod) return;
-    const lines: string[] = [];
+  const copyCSV = async () => {
+    if (!data) return;
+    const csv = toCSV(data.rows, data.periodName || "");
+    try {
+      await navigator.clipboard.writeText(csv);
+      // sin alertas invasivas; si quieres UI toast lo agregamos después
+    } catch {
+      // fallback: descarga
+      downloadCSV("kardex.csv", csv);
+    }
+  };
 
-    lines.push(csvEscape("Tecnológico Nacional de México — Campus Matehuala"));
-    lines.push(csvEscape("KARDEX DEL PERIODO"));
-    lines.push("");
-    lines.push(csvEscape(`PERIODO: ${selectedPeriod.name}`));
-    lines.push("");
-
-    const header = ["Clave", "Materia", "Grupo", "Docente", "Estatus", "Calificación final"];
-    lines.push(header.map(csvEscape).join(","));
-
-    const sorted = [...filtered].sort((a, b) => {
-      const as = String((a.subjectId ?? a.classAssignmentId?.subjectId)?.name ?? "").toLowerCase();
-      const bs = String((b.subjectId ?? b.classAssignmentId?.subjectId)?.name ?? "").toLowerCase();
-      return as.localeCompare(bs, "es", { sensitivity: "base" });
-    });
-
-    sorted.forEach((r) => {
-      const sub = r.subjectId ?? r.classAssignmentId?.subjectId ?? {};
-      const grp = r.groupId ?? r.classAssignmentId?.groupId ?? {};
-      const tea = r.teacherId ?? r.classAssignmentId?.teacherId ?? {};
-      const grade =
-        r.finalGrade === null || r.finalGrade === undefined || Number.isNaN(Number(r.finalGrade))
-          ? ""
-          : String(r.finalGrade);
-
-      lines.push(
-        [
-          sub?.code ?? "",
-          sub?.name ?? "",
-          grp?.name ?? "",
-          tea?.name ?? "",
-          r.status ?? "",
-          grade,
-        ].map(csvEscape).join(","),
-      );
-    });
-
-    const filename = `kardex_${safeFilename(selectedPeriod.name)}.csv`;
-    downloadTextFile(filename, lines.join("\n"));
+  const exportCSV = () => {
+    if (!data) return;
+    const csv = toCSV(data.rows, data.periodName || "");
+    const filename = `kardex_${(data.periodName || "periodo").replace(/\s+/g, "_")}.csv`.toLowerCase();
+    downloadCSV(filename, csv);
   };
 
   return (
-    <DashboardLayout title="Kardex">
+    <DashboardLayout title="Kardex por periodo">
       {error ? (
         <Alert variant="destructive" className="mb-4">
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{String(error)}</AlertDescription>
         </Alert>
       ) : null}
 
-      <div className="mb-4 grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
-        <div>
-          <label className="text-sm text-muted-foreground">Periodo</label>
-          <select
-            className="mt-1 h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
-            value={periodId}
-            onChange={(e) => setPeriodId(e.target.value)}
-          >
-            <option value="">Selecciona...</option>
-            {periods.map((p) => (
-              <option key={p._id} value={p._id}>
-                {p.name}
-                {p.isActive ? " (Activo)" : ""}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="text-sm text-muted-foreground">Buscar</label>
-          <Input className="mt-1" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Materia, docente o grupo" />
-        </div>
-
-        <div className="flex gap-2">
-          <Button variant="outline" disabled={!periodId || loading || rows.length === 0} onClick={downloadCsv}>
-            Descargar CSV
-          </Button>
-        </div>
-      </div>
-
-      <div className="mb-4 grid gap-3 md:grid-cols-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Total</CardTitle>
-            <CardDescription>Materias</CardDescription>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold">{metrics.total}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Calificadas</CardTitle>
-            <CardDescription>Con final</CardDescription>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold">{metrics.graded}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Pendientes</CardTitle>
-            <CardDescription>Sin final</CardDescription>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold">{metrics.pending}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Promedio</CardTitle>
-            <CardDescription>Calificadas</CardDescription>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold">{metrics.avg ?? "-"}</CardContent>
-        </Card>
-      </div>
-
-      <Card>
+      <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Detalle</CardTitle>
-          <CardDescription>{loading ? "Cargando..." : "Materias del periodo (kardex)"}</CardDescription>
+          <CardTitle>Filtro</CardTitle>
+          <CardDescription>Selecciona el periodo y consulta tu kardex con promedio, estados y export.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 lg:grid-cols-3">
+          <div className="space-y-2">
+            <Label>Periodo</Label>
+            <select
+              className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
+              value={periodId}
+              onChange={(e) => setPeriodId(e.target.value)}
+            >
+              <option value="">Selecciona...</option>
+              {periods.map((p) => (
+                <option key={p._id} value={p._id}>
+                  {p.name}
+                  {p.isActive ? " (Activo)" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Búsqueda</Label>
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Materia, clave, docente o grupo"
+              disabled={!periodId}
+            />
+          </div>
+
+          <div className="flex gap-2 items-end">
+            <Button variant="secondary" onClick={load} disabled={!periodId || loading}>
+              Refrescar
+            </Button>
+            <Button onClick={copyCSV} disabled={!data || (data?.rows?.length ?? 0) === 0}>
+              Copiar CSV
+            </Button>
+            <Button variant="secondary" onClick={exportCSV} disabled={!data || (data?.rows?.length ?? 0) === 0}>
+              Descargar CSV
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardTitle>Resumen</CardTitle>
+            <CardDescription>Indicadores del periodo</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            {!data ? (
+              <div className="text-muted-foreground">Cargando...</div>
+            ) : (
+              <>
+                <div className="flex justify-between">
+                  <span>Total materias</span>
+                  <span className="font-medium">{data.summary.total}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Con calificación final</span>
+                  <span className="font-medium">{data.summary.withFinal}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Promedio final</span>
+                  <span className="font-medium">{data.summary.avgFinal ?? "-"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Aprobadas (≥ {data.summary.passThreshold})</span>
+                  <span className="font-medium">{data.summary.passed}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Reprobadas</span>
+                  <span className="font-medium">{data.summary.failed}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Incompletas</span>
+                  <span className="font-medium">{data.summary.incomplete}</span>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Gráfica: Calificación final por materia</CardTitle>
+            <CardDescription>Solo materias que ya tienen final capturada</CardDescription>
+          </CardHeader>
+          <CardContent style={{ height: 320 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={barData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" interval={0} angle={-15} height={60} />
+                <YAxis domain={[0, 100]} />
+                <Tooltip />
+                <Bar dataKey="final" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Gráfica: Estado del periodo</CardTitle>
+            <CardDescription>Aprobadas, reprobadas e incompletas</CardDescription>
+          </CardHeader>
+          <CardContent style={{ height: 320 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={pieData} dataKey="value" nameKey="name" outerRadius={110} label />
+                <Legend />
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Detalle por materia</CardTitle>
+          <CardDescription>U1–U5 y final</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-auto border border-border rounded-lg">
@@ -251,44 +343,44 @@ export default function KardexAlumno() {
                 <tr>
                   <th className="text-left p-3">Clave</th>
                   <th className="text-left p-3">Materia</th>
-                  <th className="text-left p-3">Grupo</th>
                   <th className="text-left p-3">Docente</th>
-                  <th className="text-left p-3">Estatus</th>
+                  <th className="text-left p-3">Grupo</th>
+                  <th className="text-left p-3">U1</th>
+                  <th className="text-left p-3">U2</th>
+                  <th className="text-left p-3">U3</th>
+                  <th className="text-left p-3">U4</th>
+                  <th className="text-left p-3">U5</th>
                   <th className="text-left p-3">Final</th>
                 </tr>
               </thead>
               <tbody>
                 {!periodId ? (
                   <tr>
-                    <td colSpan={6} className="p-4 text-muted-foreground">
+                    <td colSpan={10} className="p-4 text-muted-foreground">
                       Selecciona un periodo.
                     </td>
                   </tr>
-                ) : filtered.length === 0 ? (
+                ) : rows.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="p-4 text-muted-foreground">
-                      Sin registros.
+                    <td colSpan={10} className="p-4 text-muted-foreground">
+                      Sin materias en el periodo (o no coincide la búsqueda).
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((r) => {
-                    const sub = r.subjectId ?? r.classAssignmentId?.subjectId ?? {};
-                    const grp = r.groupId ?? r.classAssignmentId?.groupId ?? {};
-                    const tea = r.teacherId ?? r.classAssignmentId?.teacherId ?? {};
-
-                    const grade =
-                      r.finalGrade === null || r.finalGrade === undefined || Number.isNaN(Number(r.finalGrade))
-                        ? "Pendiente"
-                        : String(r.finalGrade);
-
+                  rows.map((r) => {
+                    const ug = r.unitGrades ?? {};
                     return (
                       <tr key={r._id} className="border-t border-border">
-                        <td className="p-3">{sub?.code ?? "-"}</td>
-                        <td className="p-3 font-medium">{sub?.name ?? "-"}</td>
-                        <td className="p-3">{grp?.name ?? "-"}</td>
-                        <td className="p-3">{tea?.name ?? "-"}</td>
-                        <td className="p-3">{r.status ?? "-"}</td>
-                        <td className="p-3">{grade}</td>
+                        <td className="p-3">{r.subjectCode || "-"}</td>
+                        <td className="p-3 font-medium">{r.subjectName || "-"}</td>
+                        <td className="p-3">{r.teacherName || "-"}</td>
+                        <td className="p-3">{r.groupName || "-"}</td>
+                        <td className="p-3">{ug.u1 ?? "-"}</td>
+                        <td className="p-3">{ug.u2 ?? "-"}</td>
+                        <td className="p-3">{ug.u3 ?? "-"}</td>
+                        <td className="p-3">{ug.u4 ?? "-"}</td>
+                        <td className="p-3">{ug.u5 ?? "-"}</td>
+                        <td className="p-3 font-medium">{r.finalGrade ?? "-"}</td>
                       </tr>
                     );
                   })

@@ -1,398 +1,417 @@
 import React from "react";
 import DashboardLayout from "../../layout/DashboardLayout";
 import { api } from "../../api/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/card";
 import { Button } from "../../components/button";
-import { Label } from "../../components/label";
 import { Alert, AlertDescription } from "../../components/alert";
 
-type ImportError = {
-  row: number;
-  message: string | string[];
-  data?: any;
-};
+type ImportEntity =
+  | "periods"
+  | "careers"
+  | "subjects"
+  | "teachers"
+  | "groups"
+  | "students"
+  | "class-assignments"
+  | "enrollments"
+  | "schedule-blocks"
+  | "activities"
+  | "activity-enrollments"
+  | "evaluations"
+  | "complaints";
 
 type ImportResult = {
-  entity: "students" | "class-assignments" | "schedule-blocks";
-  dryRun: boolean;
-  total: number;
+  entity: ImportEntity | string;
+  totalRows: number;
   created: number;
   updated: number;
   skipped: number;
   failed: number;
-  errors: ImportError[];
+  errors: Array<{ row: number; message: string; data?: any }>;
 };
 
-type TabKey = "students" | "class-assignments" | "schedule-blocks";
-
-function toMessage(x: any) {
-  if (Array.isArray(x)) return x.join(" | ");
-  return String(x ?? "");
-}
-
-function downloadText(filename: string, content: string, mime = "text/plain;charset=utf-8;") {
-  const blob = new Blob([content], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-function escapeCsv(v: any) {
-  const s = String(v ?? "");
-  const needs = /[",\n]/.test(s);
-  const cleaned = s.replace(/"/g, '""');
-  return needs ? `"${cleaned}"` : cleaned;
-}
-
-function downloadErrorsCsv(entity: string, errors: ImportError[]) {
-  const headers = ["row", "message", "data_json"];
-  const lines = [
-    headers.join(","),
-    ...errors.map((e) => {
-      const row = e.row ?? "";
-      const msg = toMessage(e.message);
-      const dataJson = e.data ? JSON.stringify(e.data) : "";
-      return [row, msg, dataJson].map(escapeCsv).join(",");
-    }),
-  ].join("\n");
-
-  downloadText(`errores_${entity}.csv`, lines, "text/csv;charset=utf-8;");
-}
+type TabKey =
+  | "periods"
+  | "careers"
+  | "subjects"
+  | "teachers"
+  | "groups"
+  | "students"
+  | "class-assignments"
+  | "enrollments"
+  | "activities"
+  | "schedule-blocks"
+  | "activity-enrollments"
+  | "feedback-evaluations"
+  | "feedback-complaints"
+  | "feedback-process-ai";
 
 function templateFor(tab: TabKey) {
-  if (tab === "students") {
-    // Mínimo: controlNumber,name,careerCode
-    // Opcional: status,periodName,groupName
-    return {
-      filename: "template_students.csv",
-      content: [
-        "controlNumber,name,careerCode,status,periodName,groupName",
-        "20660001,Juan Perez,ISC,active,AGO-DIC 2025,5A",
-      ].join("\n"),
-      required: ["controlNumber", "name", "careerCode"],
-      optional: ["status", "periodName", "groupName"],
-      endpoint: "/academic/import/students",
-      description:
-        "Importa/actualiza alumnos por No. Control. Opcionalmente asigna groupId si envías periodName + groupName.",
-    };
+  switch (tab) {
+    case "periods":
+      return `name,startDate,endDate,isActive
+Ene-Jun 2026,2026-01-06,2026-06-30,true
+`;
+    case "careers":
+      return `code,name,status
+ISC,Ingeniería en Sistemas Computacionales,active
+`;
+    case "subjects":
+      return `code,name,semester,careerCode,status
+ISC-101,Fundamentos de Programación,1,ISC,active
+`;
+    case "teachers":
+      return `employeeNumber,name,status
+10001,Juan Pérez,active
+`;
+    case "groups":
+      return `periodName,careerCode,name,semester,status
+Ene-Jun 2026,ISC,1A,1,active
+`;
+    case "students":
+      return `controlNumber,name,careerCode,status,periodName,groupName
+20660001,Ana López,ISC,active,Ene-Jun 2026,1A
+`;
+    case "class-assignments":
+      return `periodName,careerCode,groupName,subjectCode,teacherEmployeeNumber,status
+Ene-Jun 2026,ISC,1A,ISC-101,10001,active
+`;
+    case "enrollments":
+      return `periodName,studentControlNumber,careerCode,groupName,status
+Ene-Jun 2026,20660001,ISC,1A,active
+`;
+    case "activities":
+      return `periodName,name,type,responsibleName,capacity,status
+Ene-Jun 2026,Club de Programación,club,Mtro. Juan Pérez,30,active
+`;
+    case "schedule-blocks":
+      return `periodName,type,careerCode,groupName,subjectCode,teacherEmployeeNumber,activityName,dayOfWeek,startTime,endTime,room,deliveryMode
+Ene-Jun 2026,class,ISC,1A,ISC-101,10001,,1,07:00,08:00,LAB-1,presencial
+Ene-Jun 2026,extracurricular,,,,,Club de Programación,2,13:00,14:00,LAB-1,presencial
+`;
+    case "activity-enrollments":
+      return `periodName,activityName,studentControlNumber,status
+Ene-Jun 2026,Club de Programación,20660001,active
+`;
+    case "feedback-evaluations":
+      return `periodName,careerCode,groupName,subjectCode,teacherEmployeeNumber,studentControlNumber,clarity,punctuality,respect,planning,evaluation,comment
+Ene-Jun 2026,ISC,1A,ISC-101,10001,20660001,5,5,5,4,5,Explica con claridad y resuelve dudas.
+`;
+    case "feedback-complaints":
+      return `periodName,careerCode,groupName,subjectCode,teacherEmployeeNumber,studentControlNumber,category,description
+Ene-Jun 2026,ISC,1A,ISC-102,10003,20660002,impuntualidad,Llega tarde con frecuencia y no recupera el tiempo.
+`;
+    default:
+      return "";
   }
-
-  if (tab === "class-assignments") {
-    // periodName,careerCode,groupName,subjectCode,teacherEmployeeNumber,status?
-    return {
-      filename: "template_class_assignments.csv",
-      content: [
-        "periodName,careerCode,groupName,subjectCode,teacherEmployeeNumber,status",
-        "AGO-DIC 2025,ISC,5A,ISC-101,12345,active",
-      ].join("\n"),
-      required: ["periodName", "careerCode", "groupName", "subjectCode", "teacherEmployeeNumber"],
-      optional: ["status"],
-      endpoint: "/academic/import/class-assignments",
-      description:
-        "Importa/actualiza cargas (grupo–materia–docente) por periodo. Hace upsert por (periodo + grupo + materia).",
-    };
-  }
-
-  // schedule-blocks
-  return {
-    filename: "template_schedule_blocks.csv",
-    content: [
-      "periodName,careerCode,groupName,subjectCode,teacherEmployeeNumber,dayOfWeek,startTime,endTime,room",
-      "AGO-DIC 2025,ISC,5A,ISC-101,12345,1,07:00,08:00,A-12",
-    ].join("\n"),
-    required: [
-      "periodName",
-      "careerCode",
-      "groupName",
-      "subjectCode",
-      "teacherEmployeeNumber",
-      "dayOfWeek",
-      "startTime",
-      "endTime",
-    ],
-    optional: ["room"],
-    endpoint: "/academic/import/schedule-blocks",
-    description:
-      "Importa/actualiza bloques de horario. Upsert por (periodo + grupo + materia + docente + día + hora inicio/fin).",
-  };
 }
 
+const CONFIG: Record<
+  Exclude<TabKey, "feedback-process-ai">,
+  { title: string; endpoint: string; entity: string; description: string }
+> = {
+  periods: {
+    title: "Periodos",
+    endpoint: "/academic/import/periods",
+    entity: "periods",
+    description: "Importa periodos (name, startDate, endDate, isActive).",
+  },
+  careers: {
+    title: "Carreras",
+    endpoint: "/academic/import/careers",
+    entity: "careers",
+    description: "Importa carreras (code, name, status).",
+  },
+  subjects: {
+    title: "Materias",
+    endpoint: "/academic/import/subjects",
+    entity: "subjects",
+    description: "Importa materias (code, name, semester, careerCode, status).",
+  },
+  teachers: {
+    title: "Docentes",
+    endpoint: "/academic/import/teachers",
+    entity: "teachers",
+    description: "Importa docentes (employeeNumber, name, status).",
+  },
+  groups: {
+    title: "Grupos",
+    endpoint: "/academic/import/groups",
+    entity: "groups",
+    description: "Importa grupos (periodName, careerCode, name, semester, status).",
+  },
+  students: {
+    title: "Alumnos",
+    endpoint: "/academic/import/students",
+    entity: "students",
+    description: "Importa alumnos (controlNumber, name, careerCode, status, periodName, groupName).",
+  },
+  "class-assignments": {
+    title: "Cargas",
+    endpoint: "/academic/import/class-assignments",
+    entity: "class-assignments",
+    description: "Importa cargas (periodName, careerCode, groupName, subjectCode, teacherEmployeeNumber, status).",
+  },
+  enrollments: {
+    title: "Inscripción por grupo (periodo)",
+    endpoint: "/academic/import/enrollments",
+    entity: "enrollments",
+    description: "Inscribe alumno a su grupo base y sincroniza sus CourseEnrollments.",
+  },
+  activities: {
+    title: "Actividades extraescolares",
+    endpoint: "/academic/import/activities",
+    entity: "activities",
+    description: "Importa actividades (periodName, name, type, responsibleName, capacity, status).",
+  },
+  "schedule-blocks": {
+    title: "Horario (clases + extraescolares)",
+    endpoint: "/academic/import/schedule-blocks",
+    entity: "schedule-blocks",
+    description:
+      "Importa bloques. Para clases usa type=class + group/subject/teacher; para extraescolares usa type=extracurricular + activityName.",
+  },
+  "activity-enrollments": {
+    title: "Inscripción a actividades",
+    endpoint: "/academic/import/activity-enrollments",
+    entity: "activity-enrollments",
+    description:
+      "Inscribe alumnos a actividades (valida choques por alumno al activar).",
+  },
+  "feedback-evaluations": {
+    title: "Evaluaciones (Feedback)",
+    endpoint: "/feedback/import/evaluations",
+    entity: "evaluations",
+    description: "Importa evaluaciones con ratings + comment (texto para IA).",
+  },
+  "feedback-complaints": {
+    title: "Quejas (Feedback)",
+    endpoint: "/feedback/import/complaints",
+    entity: "complaints",
+    description: "Importa quejas (category + description) para IA.",
+  },
+};
+
 export default function ImportacionCsvPage() {
-  const [tab, setTab] = React.useState<TabKey>("students");
-  const meta = React.useMemo(() => templateFor(tab), [tab]);
-
-  const [dryRun, setDryRun] = React.useState(true);
+  const [tab, setTab] = React.useState<TabKey>("periods");
   const [file, setFile] = React.useState<File | null>(null);
-
+  const [dryRun, setDryRun] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+
   const [error, setError] = React.useState("");
   const [result, setResult] = React.useState<ImportResult | null>(null);
 
-  const canImport = React.useMemo(() => {
-    // Reglas operativas:
-    // - Debe existir archivo
-    // - Debe haberse validado (result.dryRun=true) y sin failed
-    // - Debe estar en el mismo tab/entity
-    if (!file) return false;
-    if (!result) return false;
-    if (!result.dryRun) return false;
-    if (result.failed > 0) return false;
+  // Procesar IA pendientes
+  const [aiLimit, setAiLimit] = React.useState<number>(200);
 
-    const expectedEntity = tab;
-    return result.entity === expectedEntity;
-  }, [file, result, tab]);
+  const cfg = tab === "feedback-process-ai" ? null : CONFIG[tab];
 
-  const resetForTab = React.useCallback(() => {
+  function downloadTemplate() {
+    const content = templateFor(tab);
+    const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${tab}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleUpload() {
     setError("");
     setResult(null);
-    setFile(null);
-    setDryRun(true);
-  }, []);
 
-  React.useEffect(() => {
-    resetForTab();
-  }, [tab, resetForTab]);
-
-  const submit = async (mode: "validate" | "import") => {
-    setError("");
-    setLoading(true);
-
-    try {
-      if (!file) {
-        setError("Selecciona un archivo CSV.");
-        return;
+    if (tab === "feedback-process-ai") {
+      setLoading(true);
+      try {
+        const res = await api.post(`/feedback/import/process-pending`, { limit: aiLimit });
+        // respuesta: { processed: number }
+        setResult({
+          entity: "process-pending",
+          totalRows: 0,
+          created: 0,
+          updated: 0,
+          skipped: 0,
+          failed: 0,
+          errors: [],
+          ...(res.data ?? {}),
+        } as any);
+      } catch (e: any) {
+        setError(e?.response?.data?.message ?? "Error al procesar pendientes IA");
+      } finally {
+        setLoading(false);
       }
+      return;
+    }
 
+    if (!cfg) return;
+    if (!file) {
+      setError("Selecciona un archivo CSV.");
+      return;
+    }
+
+    setLoading(true);
+    try {
       const form = new FormData();
       form.append("file", file);
 
-      const doDryRun = mode === "validate" ? true : false;
-
-      const res = await api.post(meta.endpoint, form, {
-        params: { dryRun: doDryRun ? "1" : "0" },
+      const res = await api.post(cfg.endpoint + (dryRun ? "?dryRun=true" : ""), form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-
-      setResult(res.data as ImportResult);
+      setResult(res.data);
     } catch (e: any) {
-      const msg = e?.response?.data?.message ?? e?.message ?? "Error al importar";
-      setError(toMessage(msg));
+      setError(e?.response?.data?.message ?? "Error en importación");
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  const tabs: Array<{ key: TabKey; label: string }> = [
+    { key: "periods", label: "Periodos" },
+    { key: "careers", label: "Carreras" },
+    { key: "subjects", label: "Materias" },
+    { key: "teachers", label: "Docentes" },
+    { key: "groups", label: "Grupos" },
+    { key: "students", label: "Alumnos" },
+    { key: "class-assignments", label: "Cargas" },
+    { key: "enrollments", label: "Inscripción grupo" },
+    { key: "activities", label: "Actividades" },
+    { key: "schedule-blocks", label: "Horario" },
+    { key: "activity-enrollments", label: "Inscripción actividades" },
+    { key: "feedback-evaluations", label: "Evaluaciones (IA)" },
+    { key: "feedback-complaints", label: "Quejas (IA)" },
+    { key: "feedback-process-ai", label: "Procesar IA" },
+  ];
 
   return (
-    <DashboardLayout title="Importación CSV (Control Escolar)">
-      <div className="space-y-6">
-        {error ? (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
+    <DashboardLayout title="Importación CSV">
+      {error ? (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Centro de importación</CardTitle>
-            <CardDescription>
-              Flujo recomendado: descarga plantilla → llena CSV → Validar (Dry run) → corregir errores → Importar.
-            </CardDescription>
-          </CardHeader>
+      <div className="mb-4 flex flex-wrap gap-2">
+        {tabs.map((t) => (
+          <Button
+            key={t.key}
+            variant={tab === t.key ? "default" : "secondary"}
+            onClick={() => {
+              setTab(t.key);
+              setFile(null);
+              setResult(null);
+              setError("");
+            }}
+          >
+            {t.label}
+          </Button>
+        ))}
+      </div>
 
-          <CardContent className="space-y-4">
-            {/* Tabs */}
-            <div className="flex flex-wrap gap-2">
-              <Button variant={tab === "students" ? "default" : "secondary"} onClick={() => setTab("students")}>
-                Alumnos
-              </Button>
-              <Button
-                variant={tab === "class-assignments" ? "default" : "secondary"}
-                onClick={() => setTab("class-assignments")}
-              >
-                Cargas
-              </Button>
-              <Button
-                variant={tab === "schedule-blocks" ? "default" : "secondary"}
-                onClick={() => setTab("schedule-blocks")}
-              >
-                Horario
-              </Button>
+      {tab !== "feedback-process-ai" && cfg ? (
+        <div className="mb-4 rounded-lg border border-border p-4">
+          <div className="text-sm font-medium">{cfg.title}</div>
+          <div className="mt-1 text-sm text-muted-foreground">{cfg.description}</div>
+
+          <div className="mt-4 grid gap-3">
+            <label className="text-sm font-medium">Archivo CSV</label>
+
+            <div className="flex items-center gap-3">
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                className="h-11 w-full rounded-md border border-border bg-background px-3 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-2 file:text-sm file:font-medium hover:file:bg-muted/80"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              />
             </div>
 
-            {/* Info de columnas */}
-            <div className="grid gap-4 lg:grid-cols-3">
-              <div className="space-y-2">
-                <div className="text-sm font-medium">Descripción</div>
-                <div className="text-sm text-muted-foreground">{meta.description}</div>
+            {file ? (
+              <div className="text-xs text-muted-foreground">
+                Archivo: <span className="font-medium">{file.name}</span>
               </div>
+            ) : null}
 
-              <div className="space-y-2">
-                <div className="text-sm font-medium">Columnas requeridas</div>
-                <ul className="text-sm text-muted-foreground list-disc pl-5">
-                  {meta.required.map((c) => (
-                    <li key={c}>{c}</li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="space-y-2">
-                <div className="text-sm font-medium">Columnas opcionales</div>
-                <ul className="text-sm text-muted-foreground list-disc pl-5">
-                  {meta.optional.map((c) => (
-                    <li key={c}>{c}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2 items-center">
-              <Button
-                variant="secondary"
-                onClick={() => downloadText(meta.filename, meta.content, "text/csv;charset=utf-8;")}
-              >
-                Descargar plantilla CSV
-              </Button>
-
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
                   checked={dryRun}
                   onChange={(e) => setDryRun(e.target.checked)}
-                  id="dryRun"
                 />
-                <Label htmlFor="dryRun">Dry run (recomendado)</Label>
-              </div>
-            </div>
+                Dry run (no guarda)
+              </label>
 
-            {/* File picker */}
-            <div className="space-y-2">
-              <Label>Archivo CSV</Label>
+              <Button variant="secondary" onClick={downloadTemplate}>
+                Descargar plantilla
+              </Button>
+
+              <Button onClick={handleUpload} disabled={loading}>
+                {loading ? "Importando..." : "Importar"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="mb-4 rounded-lg border border-border p-4">
+          <div className="text-sm font-medium">Procesar pendientes IA</div>
+          <div className="mt-1 text-sm text-muted-foreground">
+            Procesa evaluaciones/quejas pendientes llamando al microservicio IA (HuggingFace) y guardando análisis.
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-end gap-3">
+            <div>
+              <label className="text-sm font-medium">Límite</label>
               <input
-                type="file"
-                accept=".csv,text/csv"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                className="block w-full text-sm"
+                className="mt-1 h-11 w-40 rounded-md border border-border bg-background px-3 text-sm"
+                type="number"
+                min={1}
+                value={aiLimit}
+                onChange={(e) => setAiLimit(Number(e.target.value))}
               />
-              <div className="text-sm text-muted-foreground">
-                Importante: exporta CSV con separador de coma. Si Excel te genera con “;”, cambia el separador al exportar.
+            </div>
+
+            <Button onClick={handleUpload} disabled={loading}>
+              {loading ? "Procesando..." : "Procesar ahora"}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {result ? (
+        <div className="rounded-lg border border-border p-4">
+          <div className="text-sm font-medium">Resultado</div>
+          <div className="mt-2 grid grid-cols-2 gap-2 text-sm md:grid-cols-5">
+            <div>Entidad: <b>{String(result.entity)}</b></div>
+            <div>Total: <b>{result.totalRows ?? 0}</b></div>
+            <div>Creados: <b>{result.created ?? 0}</b></div>
+            <div>Actualizados: <b>{result.updated ?? 0}</b></div>
+            <div>Fallidos: <b>{result.failed ?? 0}</b></div>
+          </div>
+
+          {Array.isArray((result as any).errors) && (result as any).errors.length ? (
+            <div className="mt-4">
+              <div className="text-sm font-medium">Errores</div>
+              <div className="mt-2 max-h-80 overflow-auto rounded-md border border-border">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th className="p-2">Fila</th>
+                      <th className="p-2">Mensaje</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(result as any).errors.map((e: any, idx: number) => (
+                      <tr key={idx} className="border-t border-border">
+                        <td className="p-2">{e.row}</td>
+                        <td className="p-2">{e.message}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-
-            {/* Actions */}
-            <div className="flex flex-wrap gap-2">
-              <Button
-                onClick={() => submit("validate")}
-                disabled={loading || !file}
-                variant="secondary"
-              >
-                Validar (Dry run)
-              </Button>
-
-              <Button
-                onClick={() => submit("import")}
-                disabled={loading || !file || !canImport}
-              >
-                Importar (Aplicar cambios)
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Result */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Resultado</CardTitle>
-            <CardDescription>Se muestra el reporte de la última ejecución.</CardDescription>
-          </CardHeader>
-
-          <CardContent className="space-y-4">
-            {!result ? (
-              <div className="text-sm text-muted-foreground">Aún no has validado/importado un archivo.</div>
-            ) : (
-              <>
-                <div className="grid gap-4 md:grid-cols-5">
-                  <div>
-                    <div className="text-sm text-muted-foreground">Modo</div>
-                    <div className="font-medium">{result.dryRun ? "Dry run" : "Importación real"}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Total</div>
-                    <div className="font-medium">{result.total}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Creados</div>
-                    <div className="font-medium">{result.created}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Actualizados</div>
-                    <div className="font-medium">{result.updated}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Omitidos</div>
-                    <div className="font-medium">{result.skipped}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Fallidos</div>
-                    <div className="font-medium">{result.failed}</div>
-                  </div>
-                </div>
-
-                {result.errors?.length ? (
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="font-medium">Errores</div>
-                      <Button
-                        variant="secondary"
-                        onClick={() => downloadErrorsCsv(result.entity, result.errors)}
-                      >
-                        Descargar errores CSV
-                      </Button>
-                    </div>
-
-                    <div className="overflow-auto border border-border rounded-lg">
-                      <table className="w-full text-sm">
-                        <thead className="bg-muted/60">
-                          <tr>
-                            <th className="text-left p-3">Fila</th>
-                            <th className="text-left p-3">Mensaje</th>
-                            <th className="text-left p-3">Data</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {result.errors.map((e, idx) => (
-                            <tr key={idx} className="border-t border-border align-top">
-                              <td className="p-3">{e.row}</td>
-                              <td className="p-3">{toMessage(e.message)}</td>
-                              <td className="p-3">
-                                <details>
-                                  <summary className="cursor-pointer text-muted-foreground">Ver</summary>
-                                  <pre className="mt-2 whitespace-pre-wrap text-xs">
-                                    {JSON.stringify(e.data ?? {}, null, 2)}
-                                  </pre>
-                                </details>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-sm text-muted-foreground">
-                    Sin errores.
-                    {result.dryRun && result.failed === 0 ? " Puedes proceder a Importar." : null}
-                  </div>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+          ) : null}
+        </div>
+      ) : null}
     </DashboardLayout>
   );
 }

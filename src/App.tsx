@@ -23,6 +23,15 @@ import MisMateriasAlumno from "./pages/alumno/MisMateriasAlumno";
 import ImportacionCsvPage from "./pages/catalogos/ImportacionCsvPage";
 import EnrollmentsPage from "./pages/catalogos/EnrollmentsPage";
 import KardexAlumno from "./pages/alumno/KardexAlumno";
+import EvaluacionDocente from "./pages/alumno/EvaluacionDocente";
+import QuejasAlumno from "./pages/alumno/QuejasAlumno";
+import RetroalimentacionDocente from "./pages/alumno/RetroalimentacionDocente";
+import CalidadDocentePage from "./pages/admin/CalidadDocentePage";
+import QuejasAdminPage from "./pages/admin/QuejasAdminPage";
+import StudentActivitiesPage from "./pages/alumno/MisActividadesAlumno";
+import ActivitiesPage from "./pages/catalogos/ActivitiesPage";
+import DashboardAcademico from "./pages/admin/DashboardAcademico";
+import DashboardIAPage from "./pages/admin/DashboardIAPage";
 
 
 function SimpleHome({ title }: { title: string }) {
@@ -275,6 +284,85 @@ export default function App() {
           </RequireAuth>
         }
       />
+      <Route
+        path="/estudiante/evaluacion"
+        element={
+          <RequireRole allow={["estudiante"]}>
+            <EvaluacionDocente />
+          </RequireRole>
+        }
+      />
+
+      <Route
+        path="/estudiante/quejas"
+        element={
+          <RequireRole allow={["estudiante"]}>
+            <QuejasAlumno />
+          </RequireRole>
+        }
+      />
+
+      <Route
+        path="/docente/retro"
+        element={
+          <RequireRole allow={["docente"]}>
+            <RetroalimentacionDocente />
+          </RequireRole>
+        }
+      />
+
+      <Route
+        path="/admin/analytics"
+        element={
+          <RequireRole allow={["superadmin", "admin", "jefe_departamento", "capacitacion"]}>
+            <CalidadDocentePage />
+          </RequireRole>
+        }
+      />
+
+      <Route
+        path="/admin/quejas"
+        element={
+          <RequireRole allow={["superadmin", "admin", "jefe_departamento", "capacitacion"]}>
+            <QuejasAdminPage />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/catalogos/actividades"
+        element={
+          <RequireRole allow={["superadmin", "admin", "control_escolar"]}>
+            <ActivitiesPage />
+          </RequireRole>
+        }
+      />
+
+      <Route
+        path="/estudiante/actividades"
+        element={
+          <RequireRole allow={["estudiante"]}>
+            <StudentActivitiesPage />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/dashboard/academico"
+        element={
+          <RequireRole allow={["superadmin", "admin", "control_escolar", "jefe_departamento", "capacitacion"]}>
+            <DashboardAcademico />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/dashboard/ia"
+        element={
+          <RequireRole allow={["superadmin","admin","control_escolar","jefe_departamento","capacitacion"]}>
+            <DashboardIAPage />
+          </RequireRole>
+        }
+      />
+
+
 
       {/* Genéricos */}
       <Route path="/dashboard" element={<RequireAuth><Navigate to="/dashboard/admin" replace /></RequireAuth>} />

@@ -132,7 +132,7 @@ export default function StudentsPage() {
   }, [rows, q]);
 
   return (
-    <DashboardLayout title="Alumnos (Students)">
+    <DashboardLayout title="Alumnos">
       <div className="space-y-6">
         {error ? (
           <Alert variant="destructive">
