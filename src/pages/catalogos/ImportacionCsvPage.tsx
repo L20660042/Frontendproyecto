@@ -13,6 +13,7 @@ type ImportEntity =
   | "students"
   | "class-assignments"
   | "enrollments"
+  | "grades"
   | "schedule-blocks"
   | "activities"
   | "activity-enrollments"
@@ -41,6 +42,7 @@ type TabKey =
   | "students"
   | "class-assignments"
   | "enrollments"
+  | "grades"
   | "activities"
   | "schedule-blocks"
   | "activity-enrollments"
@@ -82,6 +84,11 @@ Ene-Jun 2026,ISC,1A,ISC-101,10001,active
       return `periodName,studentControlNumber,careerCode,groupName,status
 Ene-Jun 2026,20660001,ISC,1A,active
 `;
+    case "grades":
+      return `periodName,careerCode,groupName,subjectCode,teacherEmployeeNumber,studentControlNumber,u1,u2,u3,u4,u5,finalGrade
+Ene-Jun 2026,ISC,1A,ISC-101,10001,20660001,90,88,92,85,93,90
+`;
+
     case "activities":
       return `periodName,name,type,responsibleName,capacity,status
 Ene-Jun 2026,Club de Programación,club,Mtro. Juan Pérez,30,active
@@ -159,6 +166,12 @@ const CONFIG: Record<
     endpoint: "/academic/import/enrollments",
     entity: "enrollments",
     description: "Inscribe alumno a su grupo base y sincroniza sus CourseEnrollments.",
+  },
+  grades: {
+    title: "Calificaciones",
+    endpoint: "/academic/import/grades",
+    entity: "grades",
+    description: "Importa calificaciones (u1..u5 + finalGrade) y actualiza/crea CourseEnrollments.",
   },
   activities: {
     title: "Actividades extraescolares",
@@ -278,6 +291,7 @@ export default function ImportacionCsvPage() {
     { key: "students", label: "Alumnos" },
     { key: "class-assignments", label: "Cargas" },
     { key: "enrollments", label: "Inscripción grupo" },
+    { key: "grades", label: "Calificaciones" },
     { key: "activities", label: "Actividades" },
     { key: "schedule-blocks", label: "Horario" },
     { key: "activity-enrollments", label: "Inscripción actividades" },

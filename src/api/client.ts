@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "https://mi-backendnew-production.up.railway.app",
+  baseURL: "https://mi-backendnew-production.up.railway.app",
   withCredentials: false,
 });
 
