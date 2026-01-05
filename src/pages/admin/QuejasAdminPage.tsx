@@ -48,8 +48,11 @@ export default function QuejasAdminPage() {
         const res = await api.get("/academic/periods");
         const list: Period[] = res.data ?? [];
         setPeriods(list);
-        const active = list.find((p) => p.isActive);
-        if (active) setPeriodId(active._id);
+        // IMPORTANTE:
+        // En esta pantalla el periodo es opcional ("Todos").
+        // Si autoseleccionamos el activo, el usuario ve "aparecen y desaparecen"
+        // (primero carga todos, luego filtra al activo y puede quedar vacío).
+        // Dejamos por defecto "Todos".
       } catch (e: any) {
         setError(e?.response?.data?.message ?? "Error al cargar periodos");
       }
