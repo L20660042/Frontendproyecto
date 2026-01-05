@@ -123,12 +123,7 @@ export default function StudentsPage() {
   const filtered = React.useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return rows;
-    return rows.filter((r) => {
-      return (
-        (r.controlNumber ?? "").toLowerCase().includes(s) ||
-        (r.name ?? "").toLowerCase().includes(s)
-      );
-    });
+    return rows.filter((r) => (r.controlNumber ?? "").toLowerCase().includes(s) || (r.name ?? "").toLowerCase().includes(s));
   }, [rows, q]);
 
   return (
@@ -140,64 +135,59 @@ export default function StudentsPage() {
           </Alert>
         ) : null}
 
+        {/* ARRIBA: Crear */}
         <Card>
           <CardHeader>
             <CardTitle>Crear alumno</CardTitle>
-            <CardDescription>
-              Control Escolar captura alumnos aquí. Luego ya aparecen en Inscripciones.
-            </CardDescription>
+            <CardDescription>Control Escolar captura alumnos aquí. Luego ya aparecen en Inscripciones.</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4 lg:grid-cols-4">
-            <div className="space-y-2 lg:col-span-2">
-              <Label>Carrera</Label>
-              <select
-                className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
-                value={careerId}
-                onChange={(e) => setCareerId(e.target.value)}
-              >
-                <option value="">Selecciona...</option>
-                {careers.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.code ? `${c.code} - ` : ""}{c.name}
-                  </option>
-                ))}
-              </select>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2 md:col-span-2">
+                <Label>Carrera</Label>
+                <select
+                  className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
+                  value={careerId}
+                  onChange={(e) => setCareerId(e.target.value)}
+                >
+                  <option value="">Selecciona...</option>
+                  {careers.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.code ? `${c.code} - ` : ""}
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <select
+                  className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as any)}
+                >
+                  <option value="active">active</option>
+                  <option value="inactive">inactive</option>
+                  <option value="suspended">suspended</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>No. Control</Label>
+                <Input value={controlNumber} onChange={(e) => setControlNumber(e.target.value)} placeholder="20660042" disabled={loading} className="h-11" />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label>Nombre</Label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre completo" disabled={loading} className="h-11" />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>No. Control</Label>
-              <Input
-                value={controlNumber}
-                onChange={(e) => setControlNumber(e.target.value)}
-                placeholder="20660042"
-                disabled={loading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <select
-                className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
-                value={status}
-                onChange={(e) => setStatus(e.target.value as any)}
-              >
-                <option value="active">active</option>
-                <option value="inactive">inactive</option>
-                <option value="suspended">suspended</option>
-              </select>
-            </div>
-
-            <div className="space-y-2 lg:col-span-3">
-              <Label>Nombre</Label>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Nombre completo"
-                disabled={loading}
-              />
-            </div>
-
-            <div className="flex items-end">
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+              <Button variant="secondary" onClick={loadStudents} disabled={loading}>
+                Refrescar
+              </Button>
               <Button onClick={create} disabled={loading || !careerId || !controlNumber || !name}>
                 Crear
               </Button>
@@ -205,26 +195,30 @@ export default function StudentsPage() {
           </CardContent>
         </Card>
 
+        {/* ABAJO: Listado */}
         <Card>
           <CardHeader>
-            <CardTitle>Listado</CardTitle>
+            <CardTitle>Alumnos registrados</CardTitle>
             <CardDescription>{loading ? "Cargando..." : "Filtra por nombre o No. Control"}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid gap-3 lg:grid-cols-3">
-              <div className="space-y-2 lg:col-span-2">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div className="space-y-2 w-full lg:max-w-xl">
                 <Label>Búsqueda</Label>
                 <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Juan / 2066..." />
               </div>
-              <div className="flex items-end gap-2">
+              <div className="flex gap-2">
                 <Button variant="secondary" onClick={loadStudents} disabled={loading}>
                   Refrescar
+                </Button>
+                <Button variant="outline" onClick={() => setQ("")} disabled={loading}>
+                  Limpiar
                 </Button>
               </div>
             </div>
 
-            <div className="overflow-auto border border-border rounded-lg">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-sm min-w-[900px]">
                 <thead className="bg-muted/60">
                   <tr>
                     <th className="text-left p-3">No. Control</th>
@@ -242,13 +236,7 @@ export default function StudentsPage() {
                     </tr>
                   ) : (
                     filtered.map((s) => (
-                      <StudentRowItem
-                        key={s._id}
-                        s={s}
-                        onSave={update}
-                        onDelete={remove}
-                        disabled={loading}
-                      />
+                      <StudentRowItem key={s._id} s={s} onSave={update} onDelete={remove} disabled={loading} />
                     ))
                   )}
                 </tbody>
@@ -278,12 +266,12 @@ function StudentRowItem({
   return (
     <tr className="border-t border-border">
       <td className="p-3">{s.controlNumber}</td>
-      <td className="p-3">
+      <td className="p-3 min-w-[320px]">
         <Input className="h-10" value={name} onChange={(e) => setName(e.target.value)} disabled={disabled} />
       </td>
-      <td className="p-3">
+      <td className="p-3 w-44">
         <select
-          className="h-10 rounded-md border border-border bg-input px-3 text-sm"
+          className="h-10 w-full rounded-md border border-border bg-input px-3 text-sm"
           value={status}
           onChange={(e) => setStatus(e.target.value as any)}
           disabled={disabled}
@@ -293,13 +281,15 @@ function StudentRowItem({
           <option value="suspended">suspended</option>
         </select>
       </td>
-      <td className="p-3 flex gap-2">
-        <Button onClick={() => onSave(s._id, { name: name.trim(), status })} disabled={disabled || !name.trim()}>
-          Guardar
-        </Button>
-        <Button variant="destructive" onClick={() => onDelete(s._id)} disabled={disabled}>
-          Eliminar
-        </Button>
+      <td className="p-3">
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => onSave(s._id, { name: name.trim(), status })} disabled={disabled || !name.trim()}>
+            Guardar
+          </Button>
+          <Button variant="destructive" onClick={() => onDelete(s._id)} disabled={disabled}>
+            Eliminar
+          </Button>
+        </div>
       </td>
     </tr>
   );

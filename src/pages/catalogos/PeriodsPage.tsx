@@ -102,7 +102,14 @@ export default function PeriodsPage() {
 
   return (
     <DashboardLayout title="Periodos">
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="space-y-6">
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* ARRIBA: Crear */}
         <Card>
           <CardHeader>
             <CardTitle>Crear periodo</CardTitle>
@@ -112,25 +119,41 @@ export default function PeriodsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="name">Nombre</Label>
+                <Input
+                  id="name"
+                  className="h-11"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ene–Jun 2026"
+                  disabled={loading}
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="name">Nombre</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ene–Jun 2026" disabled={loading} />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="startDate">Inicio</Label>
-                <Input id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} disabled={loading} />
+                <Input
+                  id="startDate"
+                  className="h-11"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  disabled={loading}
+                />
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="endDate">Fin</Label>
-                <Input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} disabled={loading} />
+                <Input
+                  id="endDate"
+                  className="h-11"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  disabled={loading}
+                />
               </div>
             </div>
 
@@ -146,26 +169,26 @@ export default function PeriodsPage() {
               <Label htmlFor="isActive">Periodo activo</Label>
             </div>
 
-            <Button onClick={create} className="w-full" disabled={loading || !name.trim() || !startDate || !endDate}>
-              Crear periodo
-            </Button>
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+              <Button variant="secondary" onClick={load} disabled={loading}>
+                Refrescar
+              </Button>
+              <Button onClick={create} disabled={loading || !name.trim() || !startDate || !endDate}>
+                Crear periodo
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
+        {/* ABAJO: Lista */}
         <Card>
           <CardHeader>
             <CardTitle>Periodos registrados</CardTitle>
             <CardDescription>{loading ? "Cargando..." : "Edita y elimina desde aquí"}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={load} disabled={loading}>
-                Refrescar
-              </Button>
-            </div>
-
-            <div className="overflow-auto border border-border rounded-lg">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-sm min-w-[900px]">
                 <thead className="bg-muted/60">
                   <tr>
                     <th className="text-left p-3">Nombre</th>
@@ -220,10 +243,10 @@ function PeriodRowItem({
       <td className="p-3 min-w-[260px]">
         <Input className="h-10" value={name} onChange={(e) => setName(e.target.value)} disabled={disabled} />
       </td>
-      <td className="p-3 w-40">
+      <td className="p-3 w-44">
         <Input className="h-10" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} disabled={disabled} />
       </td>
-      <td className="p-3 w-40">
+      <td className="p-3 w-44">
         <Input className="h-10" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} disabled={disabled} />
       </td>
       <td className="p-3 w-28">

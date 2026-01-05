@@ -146,16 +146,17 @@ export default function SubjectsPage() {
           </Alert>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Crear materia</CardTitle>
-              <CardDescription>
-                Las materias se registran por <strong>carrera</strong> y <strong>semestre</strong>.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
+        {/* ARRIBA: Crear */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Crear materia</CardTitle>
+            <CardDescription>
+              Las materias se registran por <strong>carrera</strong> y <strong>semestre</strong>.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2 md:col-span-2">
                 <Label>Carrera</Label>
                 <select
                   className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
@@ -172,35 +173,56 @@ export default function SubjectsPage() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Nombre</Label>
-                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Programación Web" disabled={loading} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Código</Label>
-                  <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="ISC-401" disabled={loading} />
-                </div>
+              <div className="space-y-2">
+                <Label>Semestre</Label>
+                <Input
+                  className="h-11"
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={semester}
+                  onChange={(e) => setSemester(Number(e.target.value))}
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label>Nombre</Label>
+                <Input
+                  className="h-11"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Programación Web"
+                  disabled={loading}
+                />
               </div>
 
               <div className="space-y-2">
-                <Label>Semestre</Label>
-                <Input type="number" min={1} max={20} value={semester} onChange={(e) => setSemester(Number(e.target.value))} disabled={loading} />
+                <Label>Código</Label>
+                <Input className="h-11" value={code} onChange={(e) => setCode(e.target.value)} placeholder="ISC-401" disabled={loading} />
               </div>
+            </div>
 
-              <Button className="w-full" onClick={create} disabled={loading || !createCareerId || !name.trim() || !code.trim()}>
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+              <Button variant="secondary" onClick={load} disabled={loading}>
+                Refrescar
+              </Button>
+              <Button onClick={create} disabled={loading || !createCareerId || !name.trim() || !code.trim()}>
                 Crear materia
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Materias registradas</CardTitle>
-              <CardDescription>{loading ? "Cargando..." : "Filtra, edita o elimina"}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+        {/* ABAJO: Lista */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Materias registradas</CardTitle>
+            <CardDescription>{loading ? "Cargando..." : "Filtra, edita o elimina"}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div className="grid gap-3 sm:grid-cols-2 lg:max-w-2xl w-full">
                 <div className="space-y-2">
                   <Label>Carrera</Label>
                   <select
@@ -221,6 +243,7 @@ export default function SubjectsPage() {
                 <div className="space-y-2">
                   <Label>Semestre</Label>
                   <Input
+                    className="h-11"
                     type="number"
                     min={1}
                     max={20}
@@ -247,44 +270,44 @@ export default function SubjectsPage() {
                   Limpiar
                 </Button>
               </div>
+            </div>
 
-              <div className="overflow-auto border border-border rounded-lg">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/60">
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-sm min-w-[980px]">
+                <thead className="bg-muted/60">
+                  <tr>
+                    <th className="text-left p-3">Código</th>
+                    <th className="text-left p-3">Nombre</th>
+                    <th className="text-left p-3">Sem</th>
+                    <th className="text-left p-3">Carrera</th>
+                    <th className="text-left p-3">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.length === 0 ? (
                     <tr>
-                      <th className="text-left p-3">Código</th>
-                      <th className="text-left p-3">Nombre</th>
-                      <th className="text-left p-3">Sem</th>
-                      <th className="text-left p-3">Carrera</th>
-                      <th className="text-left p-3">Acciones</th>
+                      <td colSpan={5} className="p-4 text-muted-foreground">
+                        Sin materias
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {items.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="p-4 text-muted-foreground">
-                          Sin materias
-                        </td>
-                      </tr>
-                    ) : (
-                      items.map((s) => (
-                        <SubjectRowItem
-                          key={s._id}
-                          s={s}
-                          disabled={loading}
-                          careers={careers}
-                          careerLabelById={careerLabelById}
-                          onSave={update}
-                          onDelete={remove}
-                        />
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                  ) : (
+                    items.map((s) => (
+                      <SubjectRowItem
+                        key={s._id}
+                        s={s}
+                        disabled={loading}
+                        careers={careers}
+                        careerLabelById={careerLabelById}
+                        onSave={update}
+                        onDelete={remove}
+                      />
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );
@@ -317,13 +340,13 @@ function SubjectRowItem({
       <td className="p-3 w-44">
         <Input className="h-10" value={code} onChange={(e) => setCode(e.target.value)} disabled={disabled} />
       </td>
-      <td className="p-3 min-w-[260px]">
+      <td className="p-3 min-w-[300px]">
         <Input className="h-10" value={name} onChange={(e) => setName(e.target.value)} disabled={disabled} />
       </td>
       <td className="p-3 w-24">
         <Input className="h-10" type="number" min={1} max={20} value={semester} onChange={(e) => setSemester(Number(e.target.value))} disabled={disabled} />
       </td>
-      <td className="p-3 min-w-[220px]">
+      <td className="p-3 min-w-[280px]">
         <select
           className="h-10 w-full rounded-md border border-border bg-input px-3 text-sm"
           value={careerId}

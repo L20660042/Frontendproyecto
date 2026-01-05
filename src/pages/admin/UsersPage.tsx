@@ -17,43 +17,32 @@ type UserRow = {
   linkedEntityId?: string | null;
 };
 
-const ROLE_OPTIONS = [
-  "SUPERADMIN",
-  "ADMIN",
-  "SERVICIOS_ESCOLARES",
-  "DOCENTE",
-  "ALUMNO",
-  "JEFE",
-  "SUBDIRECCION",
-  "DESARROLLO_ACADEMICO",
-] as const;
+const ALL_ROLES = ["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES", "DOCENTE", "ALUMNO", "JEFE", "SUBDIRECCION", "DESARROLLO_ACADEMICO"] as const;
 
 export default function UsersPage() {
-  const [rows, setRows] = React.useState<UserRow[]>([]);
-  const [error, setError] = React.useState("");
+  const [users, setUsers] = React.useState<UserRow[]>([]);
   const [loading, setLoading] = React.useState(false);
 
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
-  const [role, setRole] = React.useState<(typeof ROLE_OPTIONS)[number]>("DOCENTE");
+  const [role, setRole] = React.useState<string>("ADMIN");
   const [status, setStatus] = React.useState<UserStatus>("active");
   const [linkedEntityId, setLinkedEntityId] = React.useState("");
 
+  // Docente autovinculación opcional (si tu backend lo usa)
   const [teacherName, setTeacherName] = React.useState("");
   const [employeeNumber, setEmployeeNumber] = React.useState("");
 
-  const isDocente = role === "DOCENTE";
-  const willAutoCreateTeacher = isDocente && !linkedEntityId.trim();
+  const [error, setError] = React.useState<string>("");
+  const [notice, setNotice] = React.useState<string>("");
 
   const load = React.useCallback(async () => {
-    setError("");
     setLoading(true);
     try {
-      const res = await api.get("/users");
-      setRows(res.data ?? []);
+      const res = await api.get<UserRow[]>("/users");
+      setUsers(res.data ?? []);
     } catch (e: any) {
-      const msg = e?.response?.data?.message ?? "Error al cargar usuarios";
-      setError(Array.isArray(msg) ? msg.join(" | ") : msg);
+      setError(e?.response?.data?.message ?? "Error al cargar usuarios");
     } finally {
       setLoading(false);
     }
@@ -63,11 +52,39 @@ export default function UsersPage() {
     load();
   }, [load]);
 
+  const isDocente = role === "DOCENTE";
+  const TEACHER_EMAIL_DOMAIN = "metricampus.local";
+  const normalizedEmail = email.trim().toLowerCase();
+  const existingByEmail = React.useMemo(
+    () => users.find((u) => u.email?.toLowerCase() === normalizedEmail) ?? null,
+    [users, normalizedEmail]
+  );
+
+  React.useEffect(() => {
+    if (role !== "DOCENTE") return;
+    const emp = employeeNumber.trim();
+    if (!emp) return;
+    const next = `${emp}@${TEACHER_EMAIL_DOMAIN}`.toLowerCase();
+    // Solo auto-llenamos si el email está vacío o ya era del dominio docente.
+    if (!email.trim() || email.trim().toLowerCase().endsWith(`@${TEACHER_EMAIL_DOMAIN}`)) {
+      setEmail(next);
+    }
+  }, [role, employeeNumber]);
+
+  // Si NO pones linkedEntityId y es DOCENTE, tu backend podría auto-crear Teacher (si lo implementaste)
+  const willAutoCreateTeacher = isDocente && !linkedEntityId.trim();
+
   const createUser = async () => {
     setError("");
+    setNotice("");
 
-    if (!email.trim()) return setError("Email requerido");
-    if (!password.trim()) return setError("Password requerido");
+    const emailNorm = email.trim().toLowerCase();
+    if (!emailNorm) return setError("Email requerido");
+
+    const isExisting = !!existingByEmail;
+
+    // Si NO existe todavía, pedimos password para crear.
+    if (!isExisting && !password.trim()) return setError("Password requerido");
 
     if (willAutoCreateTeacher) {
       if (!teacherName.trim() || teacherName.trim().length < 3) {
@@ -81,8 +98,8 @@ export default function UsersPage() {
     setLoading(true);
     try {
       const payload: any = {
-        email: email.trim(),
-        password,
+        email: emailNorm,
+        password: password.trim() ? password : undefined,
         roles: [role],
         status,
         linkedEntityId: linkedEntityId.trim() ? linkedEntityId.trim() : null,
@@ -93,7 +110,53 @@ export default function UsersPage() {
         payload.employeeNumber = employeeNumber.trim();
       }
 
-      await api.post("/users", payload);
+      // Intento 1: si existe endpoint upsert (si lo agregas en backend)
+      try {
+        await api.post("/users/upsert", payload);
+        setNotice(isExisting ? "Usuario actualizado." : "Usuario creado.");
+      } catch (e1: any) {
+        const statusCode = e1?.response?.status;
+
+        // Si el backend no tiene /users/upsert, caemos a create tradicional
+        if (statusCode === 404) {
+          try {
+            await api.post("/users", payload);
+            setNotice("Usuario creado.");
+          } catch (e2: any) {
+            const msg = e2?.response?.data?.message ?? "";
+            const msgStr = Array.isArray(msg) ? msg.join(" | ") : String(msg);
+
+            // Si el email ya existe, hacemos PATCH al usuario existente
+            const isDup = e2?.response?.status === 409 || /ya existe|duplicate|e11000/i.test(msgStr);
+
+            if (isDup) {
+              // Si no lo tenemos en memoria, consultamos listado y buscamos
+              let existing = existingByEmail;
+              if (!existing) {
+                const resList = await api.get<UserRow[]>("/users");
+                existing = (resList.data ?? []).find((u) => u.email?.toLowerCase() === emailNorm) ?? null;
+              }
+
+              if (!existing) {
+                throw e2;
+              }
+
+              await api.patch(`/users/${existing._id}`, {
+                roles: payload.roles,
+                status: payload.status,
+                linkedEntityId: payload.linkedEntityId,
+                password: payload.password ?? undefined,
+              });
+              setNotice("Usuario ya existía: se actualizó (upsert).");
+            } else {
+              throw e2;
+            }
+          }
+        } else {
+          // upsert existe pero falló
+          throw e1;
+        }
+      }
 
       setEmail("");
       setPassword("");
@@ -103,7 +166,7 @@ export default function UsersPage() {
 
       await load();
     } catch (e: any) {
-      const msg = e?.response?.data?.message ?? "Error al crear usuario";
+      const msg = e?.response?.data?.message ?? "Error al guardar usuario";
       setError(Array.isArray(msg) ? msg.join(" | ") : msg);
     } finally {
       setLoading(false);
@@ -112,6 +175,7 @@ export default function UsersPage() {
 
   const updateUser = async (id: string, patch: Partial<UserRow> & { password?: string | null }) => {
     setError("");
+    setNotice("");
     setLoading(true);
     try {
       await api.patch(`/users/${id}`, {
@@ -120,6 +184,7 @@ export default function UsersPage() {
         linkedEntityId: patch.linkedEntityId === "" ? null : patch.linkedEntityId,
         password: patch.password ?? undefined,
       });
+      setNotice("Usuario actualizado.");
       await load();
     } catch (e: any) {
       const msg = e?.response?.data?.message ?? "Error al actualizar usuario";
@@ -138,39 +203,59 @@ export default function UsersPage() {
           </Alert>
         ) : null}
 
+        {notice ? (
+          <Alert>
+            <AlertDescription>{notice}</AlertDescription>
+          </Alert>
+        ) : null}
+
         <Card>
           <CardHeader>
-            <CardTitle>Crear usuario</CardTitle>
+            <CardTitle>Crear / Actualizar (Upsert)</CardTitle>
             <CardDescription>
-              Crea usuarios. Si el rol es DOCENTE y no proporcionas linkedEntityId, el backend puede auto-crear un Teacher.
+              Si el email ya existe, en vez de fallar se actualizará el usuario. Para DOCENTE, puedes capturar employeeNumber y se autogenera
+              el correo.
             </CardDescription>
           </CardHeader>
 
-          <CardContent className="grid gap-4 lg:grid-cols-4">
-            <div className="space-y-2 lg:col-span-2">
+          <CardContent className="grid gap-4 lg:grid-cols-3">
+            <div className="space-y-2">
               <Label>Email</Label>
+              <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="usuario@metricampus.local" disabled={loading} />
+              {existingByEmail ? <div className="text-xs text-muted-foreground">Ya existe: se hará actualización (upsert).</div> : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Password {existingByEmail ? "(opcional: si lo llenas se resetea)" : ""}</Label>
               <Input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="usuario@metricampus.local"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={existingByEmail ? "Deja vacío para no cambiar" : "Password inicial"}
                 disabled={loading}
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Password</Label>
-              <Input
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                type="password"
+              <Label>Rol</Label>
+              <select
+                className="w-full h-10 border border-border rounded-md bg-background px-3 text-sm"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
                 disabled={loading}
-              />
+              >
+                {ALL_ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-2">
               <Label>Status</Label>
               <select
-                className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
+                className="w-full h-10 border border-border rounded-md bg-background px-3 text-sm"
                 value={status}
                 onChange={(e) => setStatus(e.target.value as UserStatus)}
                 disabled={loading}
@@ -181,28 +266,9 @@ export default function UsersPage() {
               </select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Rol</Label>
-              <select
-                className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
-                value={role}
-                onChange={(e) => setRole(e.target.value as any)}
-                disabled={loading}
-              >
-                {ROLE_OPTIONS.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2 lg:col-span-3">
+            <div className="space-y-2 lg:col-span-2">
               <Label>linkedEntityId (Teacher/Student _id)</Label>
-              <Input
-                value={linkedEntityId}
-                onChange={(e) => setLinkedEntityId(e.target.value)}
-                placeholder="Opcional: pega el _id del teacher/student"
-                disabled={loading}
-              />
+              <Input value={linkedEntityId} onChange={(e) => setLinkedEntityId(e.target.value)} placeholder="ObjectId" disabled={loading} />
             </div>
 
             {isDocente && (
@@ -230,7 +296,7 @@ export default function UsersPage() {
                 <div className="flex items-end">
                   <div className="text-xs text-muted-foreground">
                     {willAutoCreateTeacher
-                      ? "Se creará un Teacher automáticamente al guardar."
+                      ? "Si no proporcionas linkedEntityId, el backend podría auto-crear Teacher (si está implementado)."
                       : "Si proporcionas linkedEntityId, no se auto-crea Teacher."}
                   </div>
                 </div>
@@ -238,8 +304,8 @@ export default function UsersPage() {
             )}
 
             <div className="flex items-end">
-              <Button onClick={createUser} disabled={loading || !email || !password}>
-                {loading ? "Creando..." : "Crear"}
+              <Button onClick={createUser} disabled={loading || !email || (!password && !existingByEmail)}>
+                {loading ? "Guardando..." : "Guardar"}
               </Button>
             </div>
           </CardContent>
@@ -254,27 +320,22 @@ export default function UsersPage() {
           <CardContent>
             <div className="overflow-auto border border-border rounded-lg">
               <table className="w-full text-sm">
-                <thead className="bg-muted/60">
-                  <tr>
-                    <th className="text-left p-3">Email</th>
-                    <th className="text-left p-3">Rol</th>
-                    <th className="text-left p-3">Status</th>
-                    <th className="text-left p-3">linkedEntityId</th>
-                    <th className="text-left p-3">Acciones</th>
+                <thead className="bg-muted/30">
+                  <tr className="text-left">
+                    <th className="p-3">Email</th>
+                    <th className="p-3">Roles</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3">linkedEntityId</th>
+                    <th className="p-3">Reset password</th>
+                    <th className="p-3"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((u) => (
+                  {users.map((u) => (
                     <UserRowItem key={u._id} u={u} onSave={updateUser} />
                   ))}
                 </tbody>
               </table>
-            </div>
-
-            <div className="mt-3">
-              <Button variant="secondary" onClick={load} disabled={loading}>
-                Refrescar
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -288,34 +349,36 @@ function UserRowItem({
   onSave,
 }: {
   u: UserRow;
-  onSave: (id: string, patch: any) => Promise<void>;
+  onSave: (id: string, patch: Partial<UserRow> & { password?: string | null }) => Promise<void>;
 }) {
-  const [role, setRole] = React.useState<string>(u.roles?.[0] ?? "");
-  const [status, setStatus] = React.useState<UserStatus>(u.status);
-  const [linkedEntityId, setLinkedEntityId] = React.useState<string>(u.linkedEntityId ?? "");
+  const [role, setRole] = React.useState(u.roles?.[0] ?? "ADMIN");
+  const [status, setStatus] = React.useState<UserStatus>(u.status ?? "active");
+  const [linkedEntityId, setLinkedEntityId] = React.useState(u.linkedEntityId ?? "");
+  const [password, setPassword] = React.useState("");
+
+  React.useEffect(() => {
+    setRole(u.roles?.[0] ?? "ADMIN");
+    setStatus(u.status ?? "active");
+    setLinkedEntityId(u.linkedEntityId ?? "");
+    setPassword("");
+  }, [u._id]);
 
   return (
     <tr className="border-t border-border">
-      <td className="p-3 font-medium">{u.email}</td>
+      <td className="p-3 font-mono text-xs">{u.email}</td>
 
       <td className="p-3">
-        <select
-          className="h-10 rounded-md border border-border bg-input px-3 text-sm"
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-        >
-          {ROLE_OPTIONS.map((r) => (
-            <option key={r} value={r}>{r}</option>
+        <select className="h-9 border border-border rounded-md bg-background px-2" value={role} onChange={(e) => setRole(e.target.value)}>
+          {ALL_ROLES.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
           ))}
         </select>
       </td>
 
       <td className="p-3">
-        <select
-          className="h-10 rounded-md border border-border bg-input px-3 text-sm"
-          value={status}
-          onChange={(e) => setStatus(e.target.value as UserStatus)}
-        >
+        <select className="h-9 border border-border rounded-md bg-background px-2" value={status} onChange={(e) => setStatus(e.target.value as any)}>
           <option value="active">active</option>
           <option value="inactive">inactive</option>
           <option value="pending">pending</option>
@@ -323,11 +386,15 @@ function UserRowItem({
       </td>
 
       <td className="p-3">
+        <Input value={linkedEntityId ?? ""} onChange={(e) => setLinkedEntityId(e.target.value)} placeholder="ObjectId o vacío" />
+      </td>
+
+      <td className="p-3">
         <Input
-          value={linkedEntityId}
-          onChange={(e) => setLinkedEntityId(e.target.value)}
-          placeholder="Teacher/Student _id o vacío"
-          className="h-10"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Nuevo password (opcional)"
         />
       </td>
 
@@ -338,6 +405,7 @@ function UserRowItem({
               roles: [role],
               status,
               linkedEntityId,
+              password: password.trim() ? password : null,
             })
           }
         >

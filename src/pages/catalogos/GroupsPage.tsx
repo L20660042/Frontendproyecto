@@ -13,14 +13,77 @@ type Career = { _id: string; name: string; code: string };
 type Group = {
   _id: string;
   name: string;
-  semester: number;
-  periodId: any;
-  careerId: any;
+  semester: number;     // normalizado
+  periodId: any;        // puede venir string u objeto poblado
+  careerId: any;        // puede venir string u objeto poblado
 };
 
 function idOf(v: any): string {
   if (!v) return "";
   return typeof v === "string" ? v : v._id;
+}
+
+function parseSemesterFromAny(g: any): number {
+  const raw =
+    g?.semester ??
+    g?.semestre ??
+    g?.semesterNumber ??
+    g?.semester_no ??
+    g?.semester_index;
+
+  const n =
+    typeof raw === "number"
+      ? raw
+      : Number(String(raw ?? "").trim());
+
+  return Number.isFinite(n) && n >= 1 ? n : 1;
+}
+
+function normalizeGroup(g: any): Group {
+  return {
+    _id: String(g?._id ?? ""),
+    name: String(g?.name ?? ""),
+    semester: parseSemesterFromAny(g),
+    periodId: g?.periodId ?? g?.period ?? g?.period_id ?? null,
+    careerId: g?.careerId ?? g?.career ?? g?.career_id ?? null,
+  };
+}
+
+function Modal({
+  open,
+  title,
+  description,
+  children,
+  onClose,
+}: {
+  open: boolean;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+  onClose: () => void;
+}) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-0 flex items-center justify-center p-4">
+        <div className="w-full max-w-2xl rounded-xl border border-border bg-card shadow-xl">
+          <div className="p-5 border-b border-border">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-lg font-semibold">{title}</div>
+                {description ? <div className="text-sm text-muted-foreground mt-1">{description}</div> : null}
+              </div>
+              <Button variant="outline" onClick={onClose}>
+                Cerrar
+              </Button>
+            </div>
+          </div>
+          <div className="p-5">{children}</div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function GroupsPage() {
@@ -34,11 +97,12 @@ export default function GroupsPage() {
   const [filterPeriodId, setFilterPeriodId] = React.useState("");
   const [filterCareerId, setFilterCareerId] = React.useState("");
 
-  // creación
+  // modal crear
+  const [createOpen, setCreateOpen] = React.useState(false);
   const [createPeriodId, setCreatePeriodId] = React.useState("");
   const [createCareerId, setCreateCareerId] = React.useState("");
-  const [name, setName] = React.useState("");
-  const [semester, setSemester] = React.useState<number>(1);
+  const [createName, setCreateName] = React.useState("");
+  const [createSemester, setCreateSemester] = React.useState<string>("1");
 
   const loadCombos = React.useCallback(async () => {
     setError("");
@@ -50,7 +114,6 @@ export default function GroupsPage() {
       setPeriods(pList);
       setCareers(cList);
 
-      // defaults
       const activePeriod = pList.find((x) => x.isActive);
       if (activePeriod) {
         setCreatePeriodId((prev) => prev || activePeriod._id);
@@ -73,7 +136,8 @@ export default function GroupsPage() {
       if (filterCareerId) params.careerId = filterCareerId;
 
       const res = await api.get("/academic/groups", { params });
-      setItems(res.data ?? []);
+      const list = (res.data ?? []).map(normalizeGroup);
+      setItems(list);
     } catch (e: any) {
       setError(e?.response?.data?.message ?? "Error al cargar grupos");
     } finally {
@@ -91,20 +155,25 @@ export default function GroupsPage() {
 
   const create = async () => {
     setError("");
+
     if (!createPeriodId || !createCareerId) return setError("Selecciona Periodo y Carrera.");
-    if (!name.trim()) return setError("Nombre del grupo requerido.");
-    if (!semester || semester < 1) return setError("Semestre inválido.");
+    if (!createName.trim()) return setError("Nombre del grupo requerido.");
+
+    const semNum = Number(createSemester);
+    if (!Number.isFinite(semNum) || semNum < 1) return setError("Semestre inválido.");
 
     setLoading(true);
     try {
       await api.post("/academic/groups", {
-        name: name.trim(),
-        semester: Number(semester),
+        name: createName.trim(),
+        semester: semNum,
         periodId: createPeriodId,
         careerId: createCareerId,
       });
-      setName("");
-      setSemester(1);
+
+      setCreateName("");
+      setCreateSemester("1");
+      setCreateOpen(false);
       await load();
     } catch (e: any) {
       const msg = e?.response?.data?.message ?? "Error al crear grupo";
@@ -168,28 +237,28 @@ export default function GroupsPage() {
           </Alert>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Crear grupo</CardTitle>
-              <CardDescription>
-                Los grupos se definen por <strong>periodo</strong>, <strong>carrera</strong> y <strong>semestre</strong>. Ejemplo: “4A”.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+        {/* Barra superior */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Gestión de grupos</CardTitle>
+            <CardDescription>Filtra, crea y administra grupos (periodo, carrera y semestre).</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2 lg:max-w-3xl">
                 <div className="space-y-2">
                   <Label>Periodo</Label>
                   <select
-                    className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
-                    value={createPeriodId}
-                    onChange={(e) => setCreatePeriodId(e.target.value)}
+                    className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm text-foreground"
+                    value={filterPeriodId}
+                    onChange={(e) => setFilterPeriodId(e.target.value)}
                     disabled={loading}
                   >
-                    <option value="">Selecciona...</option>
+                    <option value="">Todos</option>
                     {periods.map((p) => (
                       <option key={p._id} value={p._id}>
-                        {p.name}{p.isActive ? " (Activo)" : ""}
+                        {p.name}
+                        {p.isActive ? " (Activo)" : ""}
                       </option>
                     ))}
                   </select>
@@ -198,12 +267,12 @@ export default function GroupsPage() {
                 <div className="space-y-2">
                   <Label>Carrera</Label>
                   <select
-                    className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
-                    value={createCareerId}
-                    onChange={(e) => setCreateCareerId(e.target.value)}
+                    className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm text-foreground"
+                    value={filterCareerId}
+                    onChange={(e) => setFilterCareerId(e.target.value)}
                     disabled={loading}
                   >
-                    <option value="">Selecciona...</option>
+                    <option value="">Todas</option>
                     {careers.map((c) => (
                       <option key={c._id} value={c._id}>
                         {c.code} - {c.name}
@@ -213,127 +282,163 @@ export default function GroupsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Nombre del grupo</Label>
-                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="4A" disabled={loading} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Semestre</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={20}
-                    value={semester}
-                    onChange={(e) => setSemester(Number(e.target.value))}
-                    disabled={loading}
-                  />
-                </div>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="secondary" onClick={load} disabled={loading}>
+                  Refrescar
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setFilterPeriodId("");
+                    setFilterCareerId("");
+                  }}
+                  disabled={loading}
+                >
+                  Limpiar
+                </Button>
+                <Button onClick={() => setCreateOpen(true)} disabled={loading}>
+                  Nuevo grupo
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tabla */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Grupos registrados</CardTitle>
+            <CardDescription>{loading ? "Cargando..." : `${items.length} registro(s)`}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-sm min-w-[980px]">
+                <thead className="bg-muted/60">
+                  <tr className="[&>th]:p-3 [&>th]:text-left">
+                    <th className="w-[220px]">Grupo</th>
+                    <th className="w-[120px]">Semestre</th>
+                    <th className="w-[320px]">Carrera</th>
+                    <th className="w-[280px]">Periodo</th>
+                    <th className="w-[220px]">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="p-4 text-muted-foreground">
+                        Sin grupos
+                      </td>
+                    </tr>
+                  ) : (
+                    items.map((g) => (
+                      <GroupRowItem
+                        key={g._id}
+                        g={g}
+                        disabled={loading}
+                        periods={periods}
+                        careers={careers}
+                        careerLabelById={careerLabelById}
+                        periodLabelById={periodLabelById}
+                        onSave={update}
+                        onDelete={remove}
+                      />
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-3 text-xs text-muted-foreground">
+              Nota: si tu backend manda el semestre con otro nombre (ej. <code>semestre</code> o <code>semesterNumber</code>),
+              aquí ya se normaliza para que no quede en blanco.
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Modal crear */}
+        <Modal
+          open={createOpen}
+          title="Nuevo grupo"
+          description="Define un grupo por periodo, carrera y semestre. Ejemplo: 4A."
+          onClose={() => setCreateOpen(false)}
+        >
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Periodo</Label>
+                <select
+                  className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm text-foreground"
+                  value={createPeriodId}
+                  onChange={(e) => setCreatePeriodId(e.target.value)}
+                  disabled={loading}
+                >
+                  <option value="">Selecciona...</option>
+                  {periods.map((p) => (
+                    <option key={p._id} value={p._id}>
+                      {p.name}
+                      {p.isActive ? " (Activo)" : ""}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              <Button className="w-full" onClick={create} disabled={loading || !createPeriodId || !createCareerId || !name.trim()}>
+              <div className="space-y-2">
+                <Label>Carrera</Label>
+                <select
+                  className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm text-foreground"
+                  value={createCareerId}
+                  onChange={(e) => setCreateCareerId(e.target.value)}
+                  disabled={loading}
+                >
+                  <option value="">Selecciona...</option>
+                  {careers.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.code} - {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Nombre del grupo</Label>
+                <Input
+                  className="h-11"
+                  value={createName}
+                  onChange={(e) => setCreateName(e.target.value)}
+                  placeholder="4A"
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Semestre</Label>
+                <Input
+                  className="h-11"
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={createSemester}
+                  onChange={(e) => setCreateSemester(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={loading}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={create}
+                disabled={loading || !createPeriodId || !createCareerId || !createName.trim()}
+              >
                 Crear grupo
               </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Grupos registrados</CardTitle>
-              <CardDescription>{loading ? "Cargando..." : "Filtra, edita o elimina"}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid gap-3 lg:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>Periodo</Label>
-                  <select
-                    className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
-                    value={filterPeriodId}
-                    onChange={(e) => setFilterPeriodId(e.target.value)}
-                    disabled={loading}
-                  >
-                    <option value="">Todos</option>
-                    {periods.map((p) => (
-                      <option key={p._id} value={p._id}>
-                        {p.name}{p.isActive ? " (Activo)" : ""}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Carrera</Label>
-                  <select
-                    className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
-                    value={filterCareerId}
-                    onChange={(e) => setFilterCareerId(e.target.value)}
-                    disabled={loading}
-                  >
-                    <option value="">Todas</option>
-                    {careers.map((c) => (
-                      <option key={c._id} value={c._id}>
-                        {c.code}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex items-end gap-2">
-                  <Button variant="secondary" onClick={load} disabled={loading}>
-                    Refrescar
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setFilterPeriodId("");
-                      setFilterCareerId("");
-                    }}
-                    disabled={loading}
-                  >
-                    Limpiar
-                  </Button>
-                </div>
-              </div>
-
-              <div className="overflow-auto border border-border rounded-lg">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/60">
-                    <tr>
-                      <th className="text-left p-3">Grupo</th>
-                      <th className="text-left p-3">Sem</th>
-                      <th className="text-left p-3">Carrera</th>
-                      <th className="text-left p-3">Periodo</th>
-                      <th className="text-left p-3">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="p-4 text-muted-foreground">
-                          Sin grupos
-                        </td>
-                      </tr>
-                    ) : (
-                      items.map((g) => (
-                        <GroupRowItem
-                          key={g._id}
-                          g={g}
-                          disabled={loading}
-                          periods={periods}
-                          careers={careers}
-                          careerLabelById={careerLabelById}
-                          periodLabelById={periodLabelById}
-                          onSave={update}
-                          onDelete={remove}
-                        />
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
+        </Modal>
       </div>
     </DashboardLayout>
   );
@@ -359,31 +464,42 @@ function GroupRowItem({
   onDelete: (id: string, label: string) => Promise<void>;
 }) {
   const [name, setName] = React.useState(g.name ?? "");
-  const [semester, setSemester] = React.useState<number>(Number(g.semester ?? 1));
+  const [semester, setSemester] = React.useState<string>(String(g.semester ?? 1));
   const [periodId, setPeriodId] = React.useState(idOf(g.periodId));
   const [careerId, setCareerId] = React.useState(idOf(g.careerId));
 
-  const canSave = name.trim() && semester >= 1 && !!periodId && !!careerId;
+  const semNum = Number(semester);
+  const canSave =
+    !!name.trim() &&
+    Number.isFinite(semNum) &&
+    semNum >= 1 &&
+    !!periodId &&
+    !!careerId;
 
   return (
-    <tr className="border-t border-border">
-      <td className="p-3 w-44">
+    <tr className="border-t border-border align-top">
+      <td className="p-3">
         <Input className="h-10" value={name} onChange={(e) => setName(e.target.value)} disabled={disabled} />
       </td>
-      <td className="p-3 w-24">
+
+      <td className="p-3">
         <Input
-          className="h-10"
+          className="h-10 w-[110px]"
           type="number"
           min={1}
           max={20}
           value={semester}
-          onChange={(e) => setSemester(Number(e.target.value))}
+          onChange={(e) => setSemester(e.target.value)}
           disabled={disabled}
         />
+        <div className="mt-1 text-xs text-muted-foreground">
+          Actual: {String(g.semester ?? 1)}
+        </div>
       </td>
-      <td className="p-3 min-w-[220px]">
+
+      <td className="p-3">
         <select
-          className="h-10 w-full rounded-md border border-border bg-input px-3 text-sm"
+          className="h-10 w-full rounded-md border border-border bg-input px-3 text-sm text-foreground"
           value={careerId}
           onChange={(e) => setCareerId(e.target.value)}
           disabled={disabled}
@@ -397,9 +513,10 @@ function GroupRowItem({
         </select>
         <div className="mt-1 text-xs text-muted-foreground">Actual: {careerLabelById(idOf(g.careerId))}</div>
       </td>
-      <td className="p-3 min-w-[220px]">
+
+      <td className="p-3">
         <select
-          className="h-10 w-full rounded-md border border-border bg-input px-3 text-sm"
+          className="h-10 w-full rounded-md border border-border bg-input px-3 text-sm text-foreground"
           value={periodId}
           onChange={(e) => setPeriodId(e.target.value)}
           disabled={disabled}
@@ -407,19 +524,21 @@ function GroupRowItem({
           <option value="">Selecciona...</option>
           {periods.map((p) => (
             <option key={p._id} value={p._id}>
-              {p.name}{p.isActive ? " (Activo)" : ""}
+              {p.name}
+              {p.isActive ? " (Activo)" : ""}
             </option>
           ))}
         </select>
         <div className="mt-1 text-xs text-muted-foreground">Actual: {periodLabelById(idOf(g.periodId))}</div>
       </td>
+
       <td className="p-3">
         <div className="flex flex-wrap gap-2">
           <Button
             onClick={() =>
               onSave(g._id, {
                 name: name.trim(),
-                semester: Number(semester),
+                semester: semNum,
                 periodId,
                 careerId,
               })

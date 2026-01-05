@@ -23,30 +23,34 @@ export default function WeeklySchedule({ blocks }: { blocks: Block[] }) {
   }
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 12 }}>
-      {([1,2,3,4,5,6,7] as const).map((d) => (
-        <div key={d} style={{ border: "1px solid #ddd", borderRadius: 8, padding: 10 }}>
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>{dayNames[d]}</div>
-          {byDay[d].length === 0 ? (
-            <div style={{ opacity: 0.6 }}>Sin bloques</div>
-          ) : (
-            byDay[d].map((b) => (
-              <div key={b._id} style={{ border: "1px solid #eee", borderRadius: 8, padding: 8, marginBottom: 8 }}>
-                <div style={{ fontWeight: 600 }}>
-                  {b.startTime}–{b.endTime} {b.room ? `(${b.room})` : ""}
-                </div>
-                <div style={{ fontSize: 13, opacity: 0.85 }}>
-                  {b.subjectId?.name ? b.subjectId.name : "Sin materia"}{" "}
-                  {b.groupId?.name ? `· ${b.groupId.name}` : ""}
-                </div>
-                <div style={{ fontSize: 12, opacity: 0.7 }}>
-                  {b.teacherId?.name ? b.teacherId.name : ""}
-                </div>
+    <div className="w-full overflow-x-auto">
+      <div className="min-w-[720px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
+        {([1, 2, 3, 4, 5, 6, 7] as const).map((d) => (
+          <div key={d} className="rounded-xl border border-border bg-card p-3">
+            <div className="font-semibold mb-2">{dayNames[d]}</div>
+            {byDay[d].length === 0 ? (
+              <div className="text-sm text-muted-foreground">Sin bloques</div>
+            ) : (
+              <div className="space-y-2">
+                {byDay[d].map((b) => (
+                  <div key={b._id} className="rounded-lg border border-border bg-muted/50 p-2">
+                    <div className="text-sm font-semibold">
+                      {b.startTime}–{b.endTime} {b.room ? `(${b.room})` : ""}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {b.subjectId?.name ? b.subjectId.name : "Sin materia"}{" "}
+                      {b.groupId?.name ? `· ${b.groupId.name}` : ""}
+                    </div>
+                    {b.teacherId?.name ? (
+                      <div className="text-xs text-muted-foreground">{b.teacherId.name}</div>
+                    ) : null}
+                  </div>
+                ))}
               </div>
-            ))
-          )}
-        </div>
-      ))}
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

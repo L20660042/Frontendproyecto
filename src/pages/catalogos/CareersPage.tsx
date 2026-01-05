@@ -106,68 +106,86 @@ export default function CareersPage() {
 
   return (
     <DashboardLayout title="Carreras">
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="space-y-6">
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* ARRIBA: Crear */}
         <Card>
           <CardHeader>
             <CardTitle>Crear carrera</CardTitle>
             <CardDescription>Catálogo base. Se usa para asociar grupos, materias y alumnos.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2 md:col-span-2">
+                <Label>Nombre</Label>
+                <Input
+                  className="h-11"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ingeniería en Sistemas Computacionales"
+                  disabled={loading}
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label>Nombre</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ingeniería en Sistemas Computacionales" disabled={loading} />
+              <div className="space-y-2">
+                <Label>Código</Label>
+                <Input className="h-11" value={code} onChange={(e) => setCode(e.target.value)} placeholder="ISC" disabled={loading} />
+              </div>
+
+              <div className="space-y-2 md:col-span-1">
+                <Label>Estatus</Label>
+                <select
+                  className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as any)}
+                  disabled={loading}
+                >
+                  <option value="active">Activa</option>
+                  <option value="inactive">Inactiva</option>
+                </select>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Código</Label>
-              <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="ISC" disabled={loading} />
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+              <Button variant="secondary" onClick={load} disabled={loading}>
+                Refrescar
+              </Button>
+              <Button onClick={create} disabled={loading || !name.trim() || !code.trim()}>
+                Crear carrera
+              </Button>
             </div>
-
-            <div className="space-y-2">
-              <Label>Estatus</Label>
-              <select
-                className="h-11 w-full rounded-md border border-border bg-input px-3 text-sm"
-                value={status}
-                onChange={(e) => setStatus(e.target.value as any)}
-                disabled={loading}
-              >
-                <option value="active">Activa</option>
-                <option value="inactive">Inactiva</option>
-              </select>
-            </div>
-
-            <Button className="w-full" onClick={create} disabled={loading || !name.trim() || !code.trim()}>
-              Crear carrera
-            </Button>
           </CardContent>
         </Card>
 
+        {/* ABAJO: Lista */}
         <Card>
           <CardHeader>
             <CardTitle>Carreras registradas</CardTitle>
-            <CardDescription>{loading ? "Cargando..." : "Edita y elimina desde aquí"}</CardDescription>
+            <CardDescription>{loading ? "Cargando..." : "Busca, edita y elimina desde aquí"}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid gap-3 lg:grid-cols-3">
-              <div className="space-y-2 lg:col-span-2">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div className="space-y-2 w-full lg:max-w-xl">
                 <Label>Búsqueda</Label>
                 <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ISC / Industrial..." />
               </div>
-              <div className="flex items-end gap-2">
+              <div className="flex gap-2">
                 <Button variant="secondary" onClick={load} disabled={loading}>
                   Refrescar
+                </Button>
+                <Button variant="outline" onClick={() => setQ("")} disabled={loading}>
+                  Limpiar
                 </Button>
               </div>
             </div>
 
-            <div className="overflow-auto border border-border rounded-lg">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-sm min-w-[900px]">
                 <thead className="bg-muted/60">
                   <tr>
                     <th className="text-left p-3">Código</th>
@@ -220,7 +238,7 @@ function CareerRowItem({
       <td className="p-3 w-48">
         <Input className="h-10" value={code} onChange={(e) => setCode(e.target.value)} disabled={disabled} />
       </td>
-      <td className="p-3">
+      <td className="p-3 min-w-[320px]">
         <Input className="h-10" value={name} onChange={(e) => setName(e.target.value)} disabled={disabled} />
       </td>
       <td className="p-3 w-44">

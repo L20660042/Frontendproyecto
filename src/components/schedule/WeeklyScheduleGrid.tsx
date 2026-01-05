@@ -5,7 +5,7 @@ export type ScheduleBlockUI = {
   _id: string;
   dayOfWeek: number; // 1..7 (Lun..Dom)
   startTime: string; // "08:00"
-  endTime: string;   // "09:50"
+  endTime: string; // "09:50"
   room?: string;
   deliveryMode?: "presencial" | "semipresencial" | "asincrono" | string;
   subjectName?: string;
@@ -40,15 +40,19 @@ export default function WeeklyScheduleGrid({
   blocks,
   startHour = 7,
   endHour = 20,
+  showWeekend = false,
 }: {
   title?: string;
   description?: string;
   blocks: ScheduleBlockUI[];
   startHour?: number; // 7 = 07:00
-  endHour?: number;   // 20 = 20:00
+  endHour?: number; // 20 = 20:00
+  showWeekend?: boolean;
 }) {
   const startMin = startHour * 60;
   const endMin = endHour * 60;
+
+  const visibleDays = React.useMemo(() => (showWeekend ? DAYS : DAYS.slice(0, 5)), [showWeekend]);
 
   const rows = React.useMemo(() => {
     // intervalos de 30 min
@@ -84,6 +88,10 @@ export default function WeeklyScheduleGrid({
     } as React.CSSProperties;
   };
 
+  const desktopGridClass = showWeekend
+    ? "grid-cols-[80px_repeat(7,1fr)] min-w-[1200px]"
+    : "grid-cols-[80px_repeat(5,1fr)] min-w-[900px]";
+
   return (
     <Card>
       <CardHeader>
@@ -92,64 +100,105 @@ export default function WeeklyScheduleGrid({
       </CardHeader>
 
       <CardContent>
-        <div className="grid grid-cols-[80px_repeat(5,1fr)] gap-2">
-          {/* Header */}
-          <div className="text-xs text-muted-foreground" />
-          {DAYS.slice(0, 5).map((d) => (
-            <div key={d.v} className="text-xs font-medium text-muted-foreground">
-              {d.label}
-            </div>
-          ))}
-
-          {/* Body: horas + columnas */}
-          <div className="space-y-0.5">
-            {rows.map((m) => (
-              <div key={m} className="h-8 text-xs text-muted-foreground flex items-center">
-                {minutesToTime(m)}
+        {/* Mobile: list view (evita empalmes y columnas apretadas) */}
+        <div className="md:hidden space-y-3">
+          {visibleDays.map((d) => {
+            const dayBlocks = byDay.get(d.v) ?? [];
+            return (
+              <div key={d.v} className="rounded-xl border border-border bg-card overflow-hidden">
+                <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+                  <div className="font-semibold">{d.label}</div>
+                  <div className="text-xs text-muted-foreground">{dayBlocks.length} bloque(s)</div>
+                </div>
+                <div className="p-3 space-y-2">
+                  {dayBlocks.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">Sin bloques</div>
+                  ) : (
+                    dayBlocks.map((b) => (
+                      <div key={b._id} className="rounded-lg border border-border bg-muted/50 p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold truncate">{b.subjectName ?? "Materia"}</div>
+                            {b.teacherName ? (
+                              <div className="text-xs text-muted-foreground truncate">{b.teacherName}</div>
+                            ) : null}
+                            {b.groupName ? (
+                              <div className="text-xs text-muted-foreground truncate">{b.groupName}</div>
+                            ) : null}
+                          </div>
+                          <div className="text-xs font-medium whitespace-nowrap">
+                            {b.startTime}–{b.endTime}
+                          </div>
+                        </div>
+                        {b.room ? <div className="mt-1 text-xs text-muted-foreground">Aula: {b.room}</div> : null}
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
+        </div>
 
-          {DAYS.slice(0, 5).map((d) => (
-            <div key={d.v} className="relative border border-border rounded-lg bg-card overflow-hidden">
-              {/* rejilla */}
-              <div className="absolute inset-0">
+        {/* Desktop: weekly grid view (con scroll horizontal) */}
+        <div className="hidden md:block">
+          <div className="w-full overflow-x-auto pb-2">
+            <div className={`grid ${desktopGridClass} gap-2`}>
+              {/* Header */}
+              <div className="text-xs text-muted-foreground" />
+              {visibleDays.map((d) => (
+                <div key={d.v} className="text-xs font-medium text-muted-foreground">
+                  {d.label}
+                </div>
+              ))}
+
+              {/* Body: horas + columnas */}
+              <div className="space-y-0.5">
                 {rows.map((m) => (
-                  <div key={m} className="h-8 border-b border-border/50" />
-                ))}
-              </div>
-
-              {/* bloques */}
-              <div className="absolute inset-0 p-1">
-                {(byDay.get(d.v) ?? []).map((b) => (
-                  <div
-                    key={b._id}
-                    className="absolute left-1 right-1 rounded-md border border-border bg-muted/70 p-2 shadow-sm"
-                    style={computeStyle(b)}
-                    title={`${b.subjectName ?? ""} ${b.startTime}-${b.endTime}`}
-                  >
-                    <div className="text-xs font-semibold truncate">
-                      {b.subjectName ?? "Materia"}
-                    </div>
-                    <div className="text-[11px] text-muted-foreground truncate">
-                      {b.startTime} - {b.endTime}{b.room ? ` • ${b.room}` : ""}
-                    </div>
-                    {b.teacherName ? (
-                      <div className="text-[11px] text-muted-foreground truncate">{b.teacherName}</div>
-                    ) : null}
-                    {b.groupName ? (
-                      <div className="text-[11px] text-muted-foreground truncate">{b.groupName}</div>
-                    ) : null}
+                  <div key={m} className="h-8 text-xs text-muted-foreground flex items-center">
+                    {minutesToTime(m)}
                   </div>
                 ))}
               </div>
-            </div>
-          ))}
-        </div>
 
-        <p className="mt-3 text-xs text-muted-foreground">
-          Nota: por simplicidad la vista muestra Lun–Vie. Sábado/Domingo se agrega igual si lo necesitas.
-        </p>
+              {visibleDays.map((d) => (
+                <div key={d.v} className="relative border border-border rounded-lg bg-card overflow-hidden">
+                  {/* rejilla */}
+                  <div className="absolute inset-0">
+                    {rows.map((m) => (
+                      <div key={m} className="h-8 border-b border-border/50" />
+                    ))}
+                  </div>
+
+                  {/* bloques */}
+                  <div className="absolute inset-0 p-1">
+                    {(byDay.get(d.v) ?? []).map((b) => (
+                      <div
+                        key={b._id}
+                        className="absolute left-1 right-1 rounded-md border border-border bg-muted/70 p-2 shadow-sm"
+                        style={computeStyle(b)}
+                        title={`${b.subjectName ?? ""} ${b.startTime}-${b.endTime}`}
+                      >
+                        <div className="text-xs font-semibold truncate">{b.subjectName ?? "Materia"}</div>
+                        <div className="text-[11px] text-muted-foreground truncate">
+                          {b.startTime} - {b.endTime}
+                          {b.room ? ` • ${b.room}` : ""}
+                        </div>
+                        {b.teacherName ? <div className="text-[11px] text-muted-foreground truncate">{b.teacherName}</div> : null}
+                        {b.groupName ? <div className="text-[11px] text-muted-foreground truncate">{b.groupName}</div> : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <p className="mt-3 text-xs text-muted-foreground">
+            Tip: en pantallas medianas, desplázate horizontalmente si es necesario.
+            {!showWeekend ? " (Por defecto se muestra Lun–Vie.)" : ""}
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

@@ -6,7 +6,6 @@ import LoginPage from "./pages/LoginPage";
 import RequireAuth from "./auth/RequireAuth";
 import { RequireRole } from "./auth/RequireRole";
 import PeriodsPage from "./pages/catalogos/PeriodsPage";
-import DashboardLayout from "./layout/DashboardLayout";
 import SchedulesPage from "./pages/horarios/SchedulesPage";
 import TeacherSchedulePage from "./pages/docente/HorarioDocente";
 import StudentSchedulePage from "./pages/alumno/HorarioAlumno";
@@ -33,18 +32,11 @@ import DashboardAcademico from "./pages/admin/DashboardAcademico";
 import DashboardIAPage from "./pages/admin/DashboardIAPage";
 import { useAuth } from "./auth/AuthContext";
 
-function SimpleHome({ title }: { title: string }) {
-  return (
-    <DashboardLayout title={title}>
-      <div className="space-y-2">
-        <h2 className="text-lg font-semibold">Bienvenido</h2>
-        <p className="text-muted-foreground">
-          Este es un placeholder de inicio. A partir de aquí montamos tus dashboards reales.
-        </p>
-      </div>
-    </DashboardLayout>
-  );
-}
+// NUEVOS INICIOS
+import AdminHomePage from "./pages/home/AdminHomePage";
+import LeadershipHomePage from "./pages/home/LeadershipHomePage";
+import DocenteHomePage from "./pages/home/DocenteHomePage";
+import AlumnoHomePage from "./pages/home/AlumnoHomePage";
 
 function DashboardRedirect() {
   const { user } = useAuth();
@@ -78,11 +70,12 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterStudentPage />} />
 
+      {/* INICIOS REALES */}
       <Route
         path="/dashboard/superadmin"
         element={
           <RequireRole allow={["SUPERADMIN"]}>
-            <SimpleHome title="Dashboard Superadmin" />
+            <AdminHomePage title="Inicio Superadmin" />
           </RequireRole>
         }
       />
@@ -91,7 +84,7 @@ export default function App() {
         path="/dashboard/admin"
         element={
           <RequireRole allow={["ADMIN"]}>
-            <SimpleHome title="Dashboard Admin" />
+            <AdminHomePage title="Inicio Admin" />
           </RequireRole>
         }
       />
@@ -100,7 +93,7 @@ export default function App() {
         path="/control-escolar"
         element={
           <RequireRole allow={["SERVICIOS_ESCOLARES"]}>
-            <SimpleHome title="Panel Servicios Escolares" />
+            <AdminHomePage title="Inicio Servicios Escolares" />
           </RequireRole>
         }
       />
@@ -109,7 +102,7 @@ export default function App() {
         path="/docente"
         element={
           <RequireRole allow={["DOCENTE"]}>
-            <SimpleHome title="Panel Docente" />
+            <DocenteHomePage />
           </RequireRole>
         }
       />
@@ -118,7 +111,7 @@ export default function App() {
         path="/estudiante"
         element={
           <RequireRole allow={["ALUMNO"]}>
-            <SimpleHome title="Panel Alumno" />
+            <AlumnoHomePage />
           </RequireRole>
         }
       />
@@ -127,7 +120,7 @@ export default function App() {
         path="/jefe-academico"
         element={
           <RequireRole allow={["JEFE"]}>
-            <SimpleHome title="Panel Jefe Académico" />
+            <LeadershipHomePage title="Inicio Jefe Académico" />
           </RequireRole>
         }
       />
@@ -136,7 +129,7 @@ export default function App() {
         path="/subdireccion"
         element={
           <RequireRole allow={["SUBDIRECCION"]}>
-            <SimpleHome title="Panel Subdirección" />
+            <LeadershipHomePage title="Inicio Subdirección" />
           </RequireRole>
         }
       />
@@ -145,11 +138,12 @@ export default function App() {
         path="/desarrollo-academico"
         element={
           <RequireRole allow={["DESARROLLO_ACADEMICO"]}>
-            <SimpleHome title="Panel Desarrollo Académico" />
+            <LeadershipHomePage title="Inicio Desarrollo Académico" />
           </RequireRole>
         }
       />
 
+      {/* CATÁLOGOS / OPERACIÓN */}
       <Route
         path="/catalogos/periodos"
         element={
@@ -258,6 +252,7 @@ export default function App() {
         }
       />
 
+      {/* DOCENTE */}
       <Route
         path="/docente/horario"
         element={
@@ -283,7 +278,7 @@ export default function App() {
         }
       />
 
-      {/* Alumno */}
+      {/* ALUMNO */}
       <Route
         path="/estudiante/horario"
         element={
@@ -333,6 +328,7 @@ export default function App() {
         }
       />
 
+      {/* ADMIN / ANALÍTICA */}
       <Route
         path="/dashboard/usuarios"
         element={
@@ -363,7 +359,9 @@ export default function App() {
       <Route
         path="/dashboard/academico"
         element={
-          <RequireRole allow={["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES", "JEFE", "SUBDIRECCION", "DESARROLLO_ACADEMICO"]}>
+          <RequireRole
+            allow={["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES", "JEFE", "SUBDIRECCION", "DESARROLLO_ACADEMICO"]}
+          >
             <DashboardAcademico />
           </RequireRole>
         }
@@ -372,7 +370,9 @@ export default function App() {
       <Route
         path="/dashboard/ia"
         element={
-          <RequireRole allow={["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES", "JEFE", "SUBDIRECCION", "DESARROLLO_ACADEMICO"]}>
+          <RequireRole
+            allow={["SUPERADMIN", "ADMIN", "SERVICIOS_ESCOLARES", "JEFE", "SUBDIRECCION", "DESARROLLO_ACADEMICO"]}
+          >
             <DashboardIAPage />
           </RequireRole>
         }
@@ -387,7 +387,16 @@ export default function App() {
         }
       />
 
-      <Route path="/dashboard" element={<RequireAuth><DashboardRedirect /></RequireAuth>} />
+      {/* Inicio genérico (redirige según rol) */}
+      <Route
+        path="/dashboard"
+        element={
+          <RequireAuth>
+            <DashboardRedirect />
+          </RequireAuth>
+        }
+      />
+
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

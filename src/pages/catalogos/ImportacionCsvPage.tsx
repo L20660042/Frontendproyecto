@@ -21,11 +21,14 @@ type ImportEntity =
 
 type ImportResult = {
   entity: ImportEntity | string;
-  totalRows: number;
+  // Backend (Nest) devuelve "total" (no "totalRows").
+  total: number;
   created: number;
   updated: number;
   skipped: number;
   failed: number;
+  // Para /feedback/import/process-pending
+  processed?: number;
   errors: Array<{ row: number; message: string; data?: any }>;
 };
 
@@ -223,17 +226,18 @@ export default function ImportacionCsvPage() {
     if (tab === "feedback-process-ai") {
       setLoading(true);
       try {
-        const res = await api.post(`/feedback/import/process-pending`, { limit: aiLimit });
+        // El backend recibe limit como query param.
+        const res = await api.post(`/feedback/import/process-pending`, {}, { params: { limit: aiLimit } });
         // respuesta: { processed: number }
         setResult({
           entity: "process-pending",
-          totalRows: 0,
+          total: 0,
           created: 0,
           updated: 0,
           skipped: 0,
           failed: 0,
           errors: [],
-          ...(res.data ?? {}),
+          processed: Number(res.data?.processed ?? 0),
         } as any);
       } catch (e: any) {
         setError(e?.response?.data?.message ?? "Error al procesar pendientes IA");
@@ -379,12 +383,15 @@ export default function ImportacionCsvPage() {
       {result ? (
         <div className="rounded-lg border border-border p-4">
           <div className="text-sm font-medium">Resultado</div>
-          <div className="mt-2 grid grid-cols-2 gap-2 text-sm md:grid-cols-5">
+          <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm md:grid-cols-5">
             <div>Entidad: <b>{String(result.entity)}</b></div>
-            <div>Total: <b>{result.totalRows ?? 0}</b></div>
+            <div>Total: <b>{result.total ?? 0}</b></div>
             <div>Creados: <b>{result.created ?? 0}</b></div>
             <div>Actualizados: <b>{result.updated ?? 0}</b></div>
             <div>Fallidos: <b>{result.failed ?? 0}</b></div>
+            {typeof (result as any).processed === "number" ? (
+              <div>Procesados IA: <b>{(result as any).processed}</b></div>
+            ) : null}
           </div>
 
           {Array.isArray((result as any).errors) && (result as any).errors.length ? (

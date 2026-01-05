@@ -31,14 +31,8 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: "Inicio",
     items: [
-      { label: "Inicio", to: "/dashboard/superadmin", roles: ["SUPERADMIN"] },
-      { label: "Inicio", to: "/dashboard/admin", roles: ["ADMIN"] },
-      { label: "Inicio", to: "/control-escolar", roles: ["SERVICIOS_ESCOLARES"] },
-      { label: "Inicio", to: "/docente", roles: ["DOCENTE"] },
-      { label: "Inicio", to: "/estudiante", roles: ["ALUMNO"] },
-      { label: "Inicio", to: "/jefe-academico", roles: ["JEFE"] },
-      { label: "Inicio", to: "/subdireccion", roles: ["SUBDIRECCION"] },
-      { label: "Inicio", to: "/desarrollo-academico", roles: ["DESARROLLO_ACADEMICO"] },
+      // Un solo Inicio: /dashboard redirige por rol con DashboardRedirect
+      { label: "Inicio", to: "/dashboard", roles: ALL_ROLES },
     ],
   },
   {
@@ -191,7 +185,7 @@ function Sidebar({
   return (
     <div className="w-full p-4">
       <div className="mb-4">
-        <div className="text-lg font-semibold">MetriCampus</div>
+        <div className="text-lg font-semibold">Metricamps</div>
         <div className="mt-1 flex flex-wrap items-center gap-2">
           {email ? <span className="text-sm text-muted-foreground">{email}</span> : null}
           {role ? <RoleBadge role={role} /> : null}
