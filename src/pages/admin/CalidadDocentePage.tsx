@@ -46,6 +46,7 @@ export default function CalidadDocentePage() {
 
   const items = data?.items ?? [];
   const teachers = data?.teachers ?? [];
+  const totals = data?.totals ?? null;
 
   return (
     <DashboardLayout title="Analítica: Calidad docente">
@@ -78,6 +79,15 @@ export default function CalidadDocentePage() {
           <CardDescription>{loading ? "Cargando..." : "Quejas + promedio de evaluación (1..5)"}</CardDescription>
         </CardHeader>
         <CardContent>
+          {totals ? (
+            <div className="mb-3 text-xs text-muted-foreground">
+              Totales del periodo: {totals.evaluations ?? 0} evaluaciones, {totals.complaints ?? 0} quejas
+              {typeof totals.complaintsUnassigned === "number" ? (
+                <> (sin asignar: {totals.complaintsUnassigned ?? 0})</>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="overflow-auto border border-border rounded-lg">
             <table className="w-full text-sm">
               <thead className="bg-muted/60">
