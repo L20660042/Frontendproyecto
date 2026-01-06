@@ -248,7 +248,13 @@ export default function DashboardLayout({ title, children }: { title: string; ch
 
   return (
     <div className="min-h-screen bg-background text-foreground flex">
-      <aside className="hidden md:flex w-80 border-r border-border bg-card">
+      {/*
+        Sidebar fija (sticky) para que el menú no desaparezca al hacer scroll.
+        - sticky + top-0: mantiene la barra en el viewport
+        - h-screen: asegura altura completa
+        - self-start: evita que se estire con el contenido del main
+      */}
+      <aside className="hidden md:flex w-80 border-r border-border bg-card sticky top-0 h-screen self-start">
         <Sidebar
           role={user?.role}
           email={user?.email}

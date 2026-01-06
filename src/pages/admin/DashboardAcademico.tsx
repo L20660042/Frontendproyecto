@@ -17,8 +17,18 @@ import {
   CartesianGrid,
   PieChart,
   Pie,
+  Cell,
   Legend,
 } from "recharts";
+
+const CHART_COLORS = {
+  primary: "var(--chart-1)",
+  ok: "var(--chart-2)",
+  warn: "var(--chart-3)",
+  accent: "var(--chart-4)",
+  info: "var(--chart-5)",
+  cardStroke: "var(--card)",
+} as const;
 
 type Period = { _id: string; name: string; isActive: boolean };
 
@@ -199,7 +209,12 @@ export default function DashboardAcademico() {
           <CardContent style={{ height: 280 }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={data?.distribution ?? []} dataKey="count" nameKey="bucket" outerRadius={95} label />
+                <Pie data={data?.distribution ?? []} dataKey="count" nameKey="bucket" outerRadius={95} label>
+                  {(data?.distribution ?? []).map((_, idx) => {
+                    const palette = [CHART_COLORS.primary, CHART_COLORS.ok, CHART_COLORS.warn, CHART_COLORS.accent, CHART_COLORS.info];
+                    return <Cell key={`dist-${idx}`} stroke={CHART_COLORS.cardStroke} fill={palette[idx % palette.length]} />;
+                  })}
+                </Pie>
                 <Legend />
                 <Tooltip />
               </PieChart>
@@ -230,11 +245,11 @@ export default function DashboardAcademico() {
           <div style={{ height: 320 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={barData}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="name" interval={0} angle={-15} height={70} />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="avg" />
+                <Bar dataKey="avg" fill={CHART_COLORS.primary} radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

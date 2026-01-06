@@ -18,8 +18,17 @@ import {
   CartesianGrid,
   PieChart,
   Pie,
+  Cell,
   Legend,
 } from "recharts";
+
+const CHART_COLORS = {
+  primary: "var(--chart-1)",
+  ok: "var(--chart-2)",
+  warn: "var(--chart-3)",
+  negative: "var(--destructive)",
+  cardStroke: "var(--card)",
+} as const;
 
 type Period = { _id: string; name: string; isActive: boolean };
 
@@ -176,9 +185,9 @@ export default function KardexAlumno() {
     const s = data?.summary;
     if (!s) return [];
     return [
-      { name: "Aprobadas", value: s.passed },
-      { name: "Reprobadas", value: s.failed },
-      { name: "Incompletas", value: s.incomplete },
+      { id: "passed" as const, name: "Aprobadas", value: s.passed },
+      { id: "failed" as const, name: "Reprobadas", value: s.failed },
+      { id: "incomplete" as const, name: "Incompletas", value: s.incomplete },
     ];
   }, [data]);
 
@@ -304,11 +313,11 @@ export default function KardexAlumno() {
           <CardContent style={{ height: 320 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={barData}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="name" interval={0} angle={-15} height={60} />
                 <YAxis domain={[0, 100]} />
                 <Tooltip />
-                <Bar dataKey="final" />
+                <Bar dataKey="final" fill={CHART_COLORS.primary} radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -322,7 +331,12 @@ export default function KardexAlumno() {
           <CardContent style={{ height: 320 }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name" outerRadius={110} label />
+                <Pie data={pieData} dataKey="value" nameKey="name" outerRadius={110} label>
+                  {pieData.map((entry, idx) => {
+                    const fill = entry.id === "passed" ? CHART_COLORS.ok : entry.id === "failed" ? CHART_COLORS.negative : CHART_COLORS.warn;
+                    return <Cell key={`kardex-pie-${idx}`} stroke={CHART_COLORS.cardStroke} fill={fill} />;
+                  })}
+                </Pie>
                 <Legend />
                 <Tooltip />
               </PieChart>
