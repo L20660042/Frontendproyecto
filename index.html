@@ -2,15 +2,35 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon"  href="/Frontendproyecto/assets/image-CZato3EW.png" />
+
+    <base href="/Frontendproyecto/" />
+
+    <link rel="icon" href="/Frontendproyecto/assets/image-CZato3EW.png" />
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Metricamps</title>
-    
-    <base href="/Frontendproyecto/" />
-    <script type="module" crossorigin src="/Frontendproyecto/assets/index-64MYIBBV.js"></script>
-    <link rel="stylesheet" crossorigin href="/Frontendproyecto/assets/index-CgscryPO.css">
+
+    <script type="text/javascript">
+      (function (l) {
+        if (l.search && l.search.length > 1 && l.search[1] === "/") {
+          var decoded = l.search
+            .slice(1)
+            .split("&")
+            .map(function (s) {
+              return s.replace(/~and~/g, "&");
+            })
+            .join("?");
+
+          window.history.replaceState(null, null, l.pathname + decoded + l.hash);
+        }
+      })(window.location);
+    </script>
+    <script type="module" crossorigin src="/Frontendproyecto/assets/index-DK4LoHhM.js"></script>
+    <link rel="stylesheet" crossorigin href="/Frontendproyecto/assets/index-C9lb3fyX.css">
   </head>
+
   <body>
-    <div id="root"></div>
+    <div id="root"></div>
+
   </body>
 </html>
