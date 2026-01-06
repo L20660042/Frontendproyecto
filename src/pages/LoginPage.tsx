@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "../components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/card";
 import { Input } from "../components/input";
@@ -21,7 +21,12 @@ export default function LoginPage() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const navigate = useNavigate();
+  const location = useLocation();
   const { setSession } = useAuth();
+
+  const from = (location.state as any)?.from as string | undefined;
+  const safeFrom =
+    typeof from === "string" && from.startsWith("/") && from !== "/login" ? from : undefined;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,10 +54,17 @@ export default function LoginPage() {
         return;
       }
 
-      // Nota: rememberMe es UI-only por ahora. Si quieres persistencia real,
-      // almacena el token en localStorage cuando rememberMe sea true.
+      // authService.login ya guarda token/user en localStorage.
+      // setSession solo actualiza el contexto para el render actual.
       setSession(token, user);
 
+      // Si venías de una ruta protegida, vuelve ahí
+      if (safeFrom) {
+        navigate(safeFrom, { replace: true });
+        return;
+      }
+
+      // Si no, cae a tu redirección por rol
       let redirectPath = "/dashboard/admin";
 
       switch (user.role) {
@@ -100,14 +112,12 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Decorative background */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-32 -left-32 h-[28rem] w-[28rem] rounded-full bg-primary/15 blur-3xl" />
         <div className="absolute -bottom-32 -right-32 h-[28rem] w-[28rem] rounded-full bg-accent/20 blur-3xl" />
       </div>
 
       <div className="relative mx-auto grid min-h-screen w-full max-w-6xl grid-cols-1 lg:grid-cols-2">
-        {/* Left: login form */}
         <div className="flex items-center justify-center p-6 sm:p-10">
           <div className="w-full max-w-md space-y-6">
             <div className="text-center space-y-2">
@@ -214,7 +224,10 @@ export default function LoginPage() {
                 <div className="mt-6 text-center">
                   <p className="text-sm text-muted-foreground">
                     ¿No tienes una cuenta?{" "}
-                    <Link to="/register" className="text-primary hover:text-primary/80 font-medium transition-colors">
+                    <Link
+                      to="/register"
+                      className="text-primary hover:text-primary/80 font-medium transition-colors"
+                    >
                       Regístrate aquí
                     </Link>
                   </p>
@@ -224,12 +237,13 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Right: info panel */}
         <div className="hidden lg:flex items-center justify-center p-10">
           <div className="max-w-md space-y-8">
             <div className="text-center space-y-4">
               <h2 className="text-2xl font-bold text-foreground">Gestión académica institucional</h2>
-              <p className="text-muted-foreground">Operación, analítica y trazabilidad con una interfaz limpia y rápida.</p>
+              <p className="text-muted-foreground">
+                Operación, analítica y trazabilidad con una interfaz limpia y rápida.
+              </p>
             </div>
 
             <div className="space-y-6">
@@ -239,7 +253,9 @@ export default function LoginPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground">Analítica y reportes</h3>
-                  <p className="text-sm text-muted-foreground">Dashboards académicos e IA para decisiones más rápidas.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Dashboards académicos e IA para decisiones más rápidas.
+                  </p>
                 </div>
               </div>
 
@@ -249,7 +265,9 @@ export default function LoginPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground">Flujo por roles</h3>
-                  <p className="text-sm text-muted-foreground">Vistas específicas para administración, docentes y alumnos.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Vistas específicas para administración, docentes y alumnos.
+                  </p>
                 </div>
               </div>
 
@@ -259,12 +277,15 @@ export default function LoginPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground">Control y seguridad</h3>
-                  <p className="text-sm text-muted-foreground">Sesiones y permisos controlados para operación confiable.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Sesiones y permisos controlados para operación confiable.
+                  </p>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

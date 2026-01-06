@@ -1,48 +1,32 @@
-import React from "react";
-import { Navigate } from "react-router-dom";
-import RequireAuth from "./RequireAuth";
+import { type JSX } from "react";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
-import type { AppRole } from "../services/authService";
 
-function homeByRole(role: AppRole) {
-  switch (role) {
-    case "SUPERADMIN":
-      return "/dashboard/superadmin";
-    case "ADMIN":
-      return "/dashboard/admin";
-    case "SERVICIOS_ESCOLARES":
-      return "/control-escolar";
-    case "DOCENTE":
-      return "/docente";
-    case "ALUMNO":
-      return "/estudiante";
-    case "JEFE":
-      return "/jefe-academico";
-    case "SUBDIRECCION":
-      return "/subdireccion";
-    case "DESARROLLO_ACADEMICO":
-      return "/desarrollo-academico";
-    default:
-      return "/dashboard/admin";
+type Props = {
+  allow: string[];
+  children: JSX.Element;
+};
+
+export function RequireRole({ allow, children }: Props) {
+  const { user, ready } = useAuth();
+  const location = useLocation();
+
+  if (!ready) {
+    return <div className="p-6 text-muted-foreground">Cargando...</div>;
   }
-}
 
-export function RequireRole({
-  allow,
-  children,
-}: {
-  allow: AppRole[];
-  children: React.ReactNode;
-}) {
-  const { user } = useAuth();
+if (!user) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: location.pathname + location.search }}
+      />
+    );
+  }
+if (!allow.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
-  return (
-    <RequireAuth>
-      {!user ? null : user.roles.some((r) => allow.includes(r)) ? (
-        <>{children}</>
-      ) : (
-        <Navigate to={homeByRole(user.role)} replace />
-      )}
-    </RequireAuth>
-  );
+  return children;
 }
