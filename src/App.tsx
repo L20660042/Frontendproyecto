@@ -31,8 +31,8 @@ import ActivitiesPage from "./pages/catalogos/ActivitiesPage";
 import DashboardAcademico from "./pages/admin/DashboardAcademico";
 import DashboardIAPage from "./pages/admin/DashboardIAPage";
 import { useAuth } from "./auth/AuthContext";
+import TermsPage from "./pages/TermsPage";
 
-// NUEVOS INICIOS
 import AdminHomePage from "./pages/home/AdminHomePage";
 import LeadershipHomePage from "./pages/home/LeadershipHomePage";
 import DocenteHomePage from "./pages/home/DocenteHomePage";
@@ -69,6 +69,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterStudentPage />} />
+      <Route path="/terms" element={<TermsPage />} />
 
       {/* INICIOS REALES */}
       <Route
@@ -143,7 +144,6 @@ export default function App() {
         }
       />
 
-      {/* CATÁLOGOS / OPERACIÓN */}
       <Route
         path="/catalogos/periodos"
         element={
@@ -387,7 +387,6 @@ export default function App() {
         }
       />
 
-      {/* Inicio genérico (redirige según rol) */}
       <Route
         path="/dashboard"
         element={
